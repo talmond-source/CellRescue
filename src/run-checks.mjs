@@ -1,0 +1,10 @@
+import fs from 'node:fs/promises';
+import vm from 'node:vm';
+const engineText = await fs.readFile(new URL('./engine.js', import.meta.url), 'utf8');
+const campaignText = await fs.readFile(new URL('./campaigns.js', import.meta.url), 'utf8');
+const missionText = await fs.readFile(new URL('./missions.js', import.meta.url), 'utf8');
+const puzzleTestText = await fs.readFile(new URL('./verify-missions.js', import.meta.url), 'utf8');
+const verifyText = await fs.readFile(new URL('./verify.js', import.meta.url), 'utf8');
+new vm.Script(engineText);
+new vm.Script(campaignText);
+vm.runInNewContext(verifyText, { vm, campaignText, missionText, puzzleTestText, engineText, console });

@@ -1,0 +1,268 @@
+'use strict';
+const $ = id => document.getElementById(id);
+const canvas=$('game'), ctx=canvas.getContext('2d',{alpha:false});
+const W=640,H=360,FLOOR=302;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const makeCanvas=(w,h)=>Object.assign(document.createElement('canvas'),{width:w,height:h});
+const keys=new Set(), taps=new Set(), atlases={}, portraits={};
+let selected=1, mode='loading', ranger=RANGERS[1], player, zone=0, world, enemies=[],bolts=[],particles=[],pickups=[];
+let camera=0, clock=0, hitStop=0, shake=0, comboCount=0, comboTimer=0, toastTimer=0;
+let dialog=[], dialogDone, run=null, last=0, accumulator=0, muted=false, audioContext;
+let storageOK=true, profile={name:'',results:[],checkpoint:null};
+try { const saved=JSON.parse(localStorage.getItem('organelle-patrol-v3')); if(saved&&Array.isArray(saved.results))profile={...profile,...saved}; }catch(e){storageOK=false}
+function save(){try{localStorage.setItem('organelle-patrol-v3',JSON.stringify(profile));}catch(e){storageOK=false} $('saveNote').textContent=storageOK?'Progress saves in this browser. Export a copy of your results for class.':'Browser saving is unavailable. Export your results before closing the game.';}
+function tone(freq,duration=.08,shape='square',volume=.025){
+ if(muted)return;
+ try{audioContext ||= new (window.AudioContext||window.webkitAudioContext)();if(audioContext.state==='suspended')audioContext.resume();
+ const o=audioContext.createOscillator(),g=audioContext.createGain();o.type=shape;o.frequency.setValueAtTime(freq,audioContext.currentTime);o.frequency.exponentialRampToValueAtTime(Math.max(40,freq*.45),audioContext.currentTime+duration);g.gain.setValueAtTime(volume,audioContext.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioContext.currentTime+duration);o.connect(g);g.connect(audioContext.destination);o.start();o.stop(audioContext.currentTime+duration);}catch(e){}
+}
+function readImage(src){return new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=reject;image.src=src;});}
+function cleanCell(image,sx,sy,sw,sh,slate=false){
+ const c=makeCanvas(sw,sh),g=c.getContext('2d',{willReadFrequently:true});g.drawImage(image,sx,sy,sw,sh,0,0,sw,sh);
+ const data=g.getImageData(0,0,sw,sh),p=data.data,seen=new Uint8Array(sw*sh),stack=[];
+ const background=i=>{const a=p[i*4+3],r=p[i*4],v=p[i*4+1],b=p[i*4+2];return a<150||(slate?r>=45&&r<95&&v>=60&&v<118&&b>=90&&b<160&&b-v>18&&v-r>4:Math.min(r,v,b)>195&&Math.max(r,v,b)-Math.min(r,v,b)<28);};
+ function enqueue(i){if(!seen[i]&&background(i)){seen[i]=1;stack.push(i);}}
+ for(let x=0;x<sw;x++){enqueue(x);enqueue((sh-1)*sw+x)}for(let y=0;y<sh;y++){enqueue(y*sw);enqueue(y*sw+sw-1)}
+ for(let k=0;k<stack.length;k++){const i=stack[k];p[i*4+3]=0;const x=i%sw,y=Math.floor(i/sw);if(x)enqueue(i-1);if(x<sw-1)enqueue(i+1);if(y)enqueue(i-sw);if(y<sh-1)enqueue(i+sw)}
+ // Keep the connected character silhouette; discard detached atlas noise.
+ const labels=new Int32Array(sw*sh);let largest=0,largestSize=0,label=0;
+ for(let i=0;i<sw*sh;i++){
+  if(labels[i]||p[i*4+3]<150)continue;
+  label++;const component=[i];labels[i]=label;
+  for(let k=0;k<component.length;k++){
+   const at=component[k],x=at%sw,y=Math.floor(at/sw);
+   for(const next of [x>0?at-1:-1,x<sw-1?at+1:-1,y>0?at-sw:-1,y<sh-1?at+sw:-1]){
+    if(next>=0&&!labels[next]&&p[next*4+3]>=150){labels[next]=label;component.push(next);}
+   }
+  }
+  if(component.length>largestSize){largest=label;largestSize=component.length;}
+ }
+ let minX=sw,minY=sh,maxX=0,maxY=0;
+ for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){
+  const i=y*sw+x;
+  if(labels[i]!==largest||p[i*4+3]<150||x<2||x>=sw-2||y<2||y>=sh-2)p[i*4+3]=0;
+  else{minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);}
+ }
+
+ g.putImageData(data,0,0);
+ return {canvas:c,bounds:[minX,minY,maxX,maxY]};
+}
+async function loadAtlas(id,cols,rows,height){
+ const image=await readImage(ASSETS[id+'-sheet']); const sw=Math.floor(image.width/cols),sh=Math.floor(image.height/rows),raw=[];
+ for(let i=0;i<cols*rows;i++)raw.push(cleanCell(image,(i%cols)*sw,Math.floor(i/cols)*sh,sw,sh));
+ const baselineHeight=Math.max(1,raw[0].bounds[3]-raw[0].bounds[1]+1),scale=height/baselineHeight;
+ atlases[id]=raw.map(({canvas:cell,bounds},i)=>{
+ const out=makeCanvas(128,112),g=out.getContext('2d');g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
+ const base=bounds[3]+1;g.drawImage(cell,64-sw*scale/2,102-base*scale,sw*scale,sh*scale);return out;
+ });
+}
+async function loadPortrait(id){
+ const image=await readImage(ASSETS[id+'-approved']);const cell=cleanCell(image,0,0,image.width,image.height,true);
+ const [x,y,right,bottom]=cell.bounds;const out=makeCanvas(120,160),g=out.getContext('2d');
+ const scale=145/Math.max(1,bottom-y);g.drawImage(cell.canvas,60-(x+right)*scale/2,8-y*scale,image.width*scale,image.height*scale);portraits[id]=out;
+}
+let environment;
+const environments={};
+async function load(){
+ let count=0;const total=RANGERS.length+2;
+ for(const r of RANGERS){await Promise.all([loadAtlas(r.id,4,4,74),loadPortrait(r.id)]);$('loadProgress').textContent=++count+'/'+total;}
+ await loadAtlas('bacteria',4,3,48);$('loadProgress').textContent=++count+'/'+total;
+ await loadAtlas('phage',4,2,104);for(const name of ['environment','archive','membranes'])environments[name]=await readImage(ASSETS[name]);
+ environment=environments.environment;
+ $('loading').hidden=true;$('missionSelect').hidden=false;$('student').value=profile.name;buildRoster();selectRanger(selected);save();mode='select';last=performance.now();requestAnimationFrame(tick);
+}
+function buildRoster(){
+ $('roster').replaceChildren();RANGERS.forEach((r,i)=>{const b=document.createElement('button');b.className='ranger';b.style.setProperty('--color',r.color);b.setAttribute('aria-label','Select '+r.name+' Ranger');
+ const art=makeCanvas(150,140),g=art.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(atlases[r.id][0],11,0,128,112);
+ const title=document.createElement('strong');title.textContent=r.name;const sub=document.createElement('small');sub.textContent=profile.results.some(v=>v.ranger===r.id)?'Mission cleared ✓':r.role;
+ b.append(art,title,sub);b.onclick=()=>selectRanger(i);$('roster').append(b);});
+}
+function selectRanger(i){selected=i;ranger=RANGERS[i];$('selectedName').textContent=ranger.name+' Ranger';$('selectedRole').textContent=ranger.role.toUpperCase();$('selectedStory').textContent=ranger.intro+' '+MISSION_STYLES[ranger.id][1];
+ const g=$('selectedArt').getContext('2d');g.clearRect(0,0,300,280);g.imageSmoothingEnabled=false;g.drawImage(atlases[ranger.id][0],-10,-4,320,280);
+ [...$('roster').children].forEach((b,j)=>{b.classList.toggle('selected',i===j);b.setAttribute('aria-pressed',String(i===j));});$('resume').hidden=profile.checkpoint?.id!==ranger.id;
+}
+function showModal(tag,title,text,actions=[]){$('modalTag').textContent=tag;$('modalTitle').textContent=title;$('modalText').textContent=text;$('choices').replaceChildren();$('modalActions').replaceChildren();for(const [label,fn]of actions){const b=document.createElement('button');b.textContent=label;b.onclick=fn;$('modalActions').append(b)}$('overlay').hidden=false;keys.clear();taps.clear();}
+function talk(lines,done){mode='dialog';dialog=lines.slice();dialogDone=done;$('speech').hidden=false;keys.clear();taps.clear();nextLine()}
+function nextLine(){if(mode!=='dialog')return;if(!dialog.length){$('speech').hidden=true;dialogDone();canvas.focus();return;}const [id,text]=dialog.shift();$('speaker').textContent=id==='phage'?'PHAGE':(RANGERS.find(r=>r.id===id)?.name||'CRISPR')+' RANGER';$('line').textContent=text;const g=$('portrait').getContext('2d');g.fillStyle='#203953';g.fillRect(0,0,72,88);g.imageSmoothingEnabled=false;if(portraits[id])g.drawImage(portraits[id],27,0,70,68,0,0,72,88);else g.drawImage(atlases.phage[0],30,0,66,66,0,0,72,88);}
+function startMission(resume=false){
+ profile.name=$('student').value.trim();const cp=resume&&profile.checkpoint?.id===ranger.id?profile.checkpoint:null;
+ run=cp?.run?structuredClone(cp.run):{id:Date.now(),seconds:0,answers:[],retries:0,score:0};
+ $('missionSelect').hidden=true;$('screen').hidden=false;$('controls').hidden=false;$('mobile').hidden=false;$('pause').hidden=false;loadZone(cp?cp.zone:0);tone(520,.15,'triangle');
+}
+function makeWorld(index){
+ const boss=index===3;
+ const route=RANGERS.findIndex(r=>r.id===ranger.id);
+ const length=boss?1100:2100+(route%5)*160;
+ const gaps=boss?[]:[
+  [500+(route%4)*45,565+(route%4)*45],
+  [1150+(route%3)*50,1220+(route%3)*50],
+  [length-520,length-450]
+ ];
+ const platforms=boss?[[280,110,235],[700,110,235]]:[];
+ const cells=[];
+ if(!boss){
+  for(let i=0;i<3;i++){
+   const x=300+i*(length-700)/3+(index%2)*45;
+   const y=230+((route+i+index)%3)*13;
+   platforms.push([Math.round(x),130,y]);
+   cells.push({x:Math.round(x+65),y:y-28,taken:false});
+  }
+  for(const [left,right] of gaps){
+   platforms.push([left-100,90,252],[right+8,105,245]);
+  }
+ }
+ return {length,gaps,platforms,cells,
+  terminal:{x:boss?170:length-180,done:false},boss,cleared:false,
+  shieldUnlocked:false,shieldActive:false};
+}
+function loadZone(index){
+ zone=index;world=makeWorld(index);
+ environment=environments[['nucleus','dna','rna','mitosis','crispr'].includes(ranger.id)?'archive':['atp','membrane','mito','golgi','smoother','lysosome'].includes(ranger.id)?'membranes':'environment'];player={x:90,y:FLOOR,vx:0,vy:0,face:1,hp:10,energy:6,ground:true,coyote:.1,jumpBuffer:0,action:null,inv:0,dodge:0,dodgeCool:0,energyClock:0,runClock:0,chain:0,combo:0,queue:false};
+ enemies=[];if(world.boss)enemies.push(makeEnemy(790,3));else for(let i=0;i<11;i++){let x=270+i*185;while(world.gaps.some(([a,b])=>x>a-40&&x<b+40))x+=95;enemies.push(makeEnemy(x,(i+zone+selected)%3));}
+ camera=0;bolts=[];particles=[];pickups=[];hitStop=0;shake=0;comboCount=0;comboTimer=0;$('overlay').hidden=true;$('speech').hidden=true;
+ profile.checkpoint={id:ranger.id,zone,run:structuredClone(run)};save();
+ const intro=world.boss?ranger.boss:ranger.tasks[zone][0]+'. '+(zone===0?ranger.intro:'The next station is in '+ranger.zones[zone]+'.');
+ const lines=[['crispr',intro],[ranger.id,world.boss?'At half strength he will raise a shield. I’ll use the control station on the left to disable it, then finish the fight.':MISSION_STYLES[ranger.id][1]+' First, I’ll collect the three '+CARGO[ranger.id][zone].toLowerCase()+' capsules.']];
+ if(zone===0)lines.push(['crispr','Z chains two punches into a kick. X draws your blaster. C dodges. Jump to reach the capsules; press E at the station.']);
+ talk(lines,()=>mode='play');updateHUD();
+}
+function makeEnemy(x,type){return {x,y:FLOOR,home:x,type,hp:type===3?70:5+type*2,max:type===3?70:5+type*2,face:-1,state:'approach',timer:.4+(x%5)*.1,clock:0,hurt:0,dead:0,attackCount:0,hit:false,walk:0};}
+function toast(text){$('toast').textContent=text;$('toast').hidden=false;toastTimer=2.8;}
+function updateHUD(){if(!player)return;$('rangerName').textContent=ranger.name.toUpperCase();$('health').firstElementChild.style.width=player.hp*10+'%';$('health').setAttribute('aria-valuenow',player.hp);$('energy').textContent='BLASTER '+Math.floor(player.energy)+'/6';const count=world.cells.filter(c=>c.taken).length;$('objective').textContent=world.boss?(world.shieldActive&&!world.shieldUnlocked?'PHAGE SHIELD · Left station [E]':'PHAGE · Final encounter'):ranger.zones[zone]+' · '+(world.terminal.done?'Reach the exit':count<3?CARGO[ranger.id][zone]+' '+count+'/3':'Activate station [E]');}
+function burst(x,y,color,count=12){for(let i=0;i<count;i++){const a=Math.random()*Math.PI*2,s=30+Math.random()*120;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-40,life:.25+Math.random()*.25,max:.5,color});}}
+function attack(kind){if(player.dodge>0||player.inv>.68)return;if(player.action){if(kind==='melee')player.queue=true;return;}if(kind==='shoot'&&player.energy<1){toast('Blaster recharging — melee restores energy');return;}
+ if(kind==='melee'){player.combo=player.chain>0?player.combo%3+1:1;player.action={kind:player.combo===3?'kick':'punch',time:0,duration:player.combo===3?.5:.34,hit:false};player.queue=false;}
+ else{player.action={kind:'shoot',time:0,duration:.48,hit:false};player.energy-=1;updateHUD();}
+}
+function damageEnemy(e,amount,knock=14){
+ if(e.hp<=0)return;
+ if(e.type===3&&!world.shieldUnlocked){
+  if(world.shieldActive){toast('Shield active — use the left station [E]');return;}
+  if(e.hp-amount<=e.max/2){
+   e.hp=e.max/2;world.shieldActive=true;bolts=[];
+   toast('Phage shield online — restore the left control station');updateHUD();return;
+  }
+ }
+ e.hp=Math.max(0,e.hp-amount);e.hurt=.16;if(e.type!==3){const nx=e.x+player.face*knock;if(!world.gaps.some(([a,b])=>nx>a-12&&nx<b+12))e.x=clamp(nx,30,world.length-30);e.state='recover';e.timer=.3;}
+ burst(e.x,e.y-(e.type===3?55:27),'#d0fff0',e.hp?10:24);hitStop=.045;shake=e.type===3?3:2;comboCount++;comboTimer=1.6;run.score+=amount*10;tone(e.hp?120:75,.09,'sawtooth');
+ if(e.hp===0){e.dead=.5;if(e.type!==3)pickups.push({x:e.x,y:FLOOR-20,kind:Math.random()<.4?'health':'energy',life:16});else{world.cleared=true;bolts=[];toast('Phage defeated — the cell is recovering');}}
+}
+function damagePlayer(amount,sourceX){if(player.inv>0||player.dodge>0||mode!=='play')return;player.hp=Math.max(0,player.hp-amount);player.inv=.85;player.action=null;player.queue=false;player.vx=(player.x<sourceX?-1:1)*110;shake=4;burst(player.x,player.y-35,'#ff7999');tone(90,.12,'sawtooth');updateHUD();if(!player.hp){mode='lost';run.retries++;showModal('CHECKPOINT','Regroup and try again','Your mission progress through earlier zones is saved.',[['Retry this zone',()=>loadZone(zone)],['Choose a Ranger',goHome]]);}}
+function terminal(){
+ if(world.terminal.done||Math.abs(player.x-world.terminal.x)>70)return;
+ if(world.boss){
+  if(!world.shieldActive){toast('The shield controls will activate at half boss health');return;}
+  openMissionPuzzle(true);return;
+ }
+ if(world.cells.some(c=>!c.taken)){toast('Collect the three mission capsules first');return;}
+ openMissionPuzzle();
+}
+function finishMission(){
+ mode='quiz';const [q,answers,right]=QUIZ[ranger.id];showModal('MISSION DEBRIEF',ranger.title,q);
+ answers.forEach((answer,i)=>{const b=document.createElement('button');b.textContent=answer;b.onclick=()=>{for(const n of $('choices').children)n.disabled=true;$('choices').children[right].classList.add('good');if(i!==right)b.classList.add('bad');const correct=i===right;run.answers.push({zone:4,question:q,answer,correct});$('modalText').textContent=(correct?'Correct. ':'Review the highlighted answer. ')+ranger.tasks[2][4];const done=document.createElement('button');done.textContent='Complete mission';done.className='primary';done.onclick=()=>complete(correct);$('modalActions').append(done);};$('choices').append(b);});
+}
+function complete(correct){
+ const result={name:profile.name||'Player',ranger:ranger.id,mission:ranger.title,date:new Date().toISOString(),seconds:Math.round(run.seconds),score:run.score+(correct?500:0),retries:run.retries,answers:run.answers};
+ if(!profile.results.some(r=>r.runId===run.id))profile.results.push({...result,runId:run.id});profile.checkpoint=null;save();mode='complete';
+ showModal('MISSION COMPLETE',ranger.name+' Ranger restored the route',ranger.tasks.map(t=>t[4]).join(' '),[['Choose next Ranger',goHome],['Export results',exportResults],['Replay mission',()=>startMission()]]);
+}
+function goHome(){mode='select';keys.clear();taps.clear();$('screen').hidden=true;$('controls').hidden=true;$('mobile').hidden=true;$('pause').hidden=true;$('missionSelect').hidden=false;buildRoster();selectRanger(selected);}
+function exportResults(){
+ const rows=[['Student','Ranger','Mission','Completed','Seconds','Score','Retries','Question','Answer','Correct']];for(const result of profile.results){for(const answer of result.answers)rows.push([result.name,RANGERS.find(r=>r.id===result.ranger)?.name||result.ranger,result.mission,result.date,result.seconds,result.score,result.retries,answer.question,answer.answer,answer.correct?'Yes':'No']);}
+ const quote=v=>'"'+String(v).replace(/^[=+@-]/,"'$&").replaceAll('"','""')+'"';const blob=new Blob(['\ufeff'+rows.map(r=>r.map(quote).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='Organelle-Rangers-results.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function pause(){if(mode==='play'){mode='pause';showModal('PAUSED',ranger.title,'Take a breather. Your current zone will wait.',[['Resume',()=>{$('overlay').hidden=true;mode='play';canvas.focus();}],['Restart zone',()=>loadZone(zone)],['Choose a Ranger',goHome]]);}else if(mode==='pause'){$('overlay').hidden=true;mode='play';canvas.focus();}}
+function surfaces(x){const list=world.platforms.filter(([a,w])=>x>=a-6&&x<=a+w+6).map(p=>p[2]);if(!world.gaps.some(([a,b])=>x>a&&x<b))list.push(FLOOR);return list.sort((a,b)=>a-b);}
+function step(dt){
+ if(mode!=='play')return;
+ run.seconds+=dt;clock+=dt;if(hitStop>0){hitStop-=dt;return;}
+ const p=player;for(const key of ['inv','dodge','dodgeCool','chain','coyote','jumpBuffer'])p[key]=Math.max(0,p[key]-dt);
+ if(comboTimer>0)comboTimer-=dt;else comboCount=0;
+ if(toastTimer>0){toastTimer-=dt;if(toastTimer<=0)$('toast').hidden=true;}
+ if(p.ground)p.coyote=.1;
+ if(taps.has('ArrowUp')||taps.has('Space'))p.jumpBuffer=.12;
+ if(p.jumpBuffer&&p.coyote){p.vy=-420;p.ground=false;p.coyote=0;p.jumpBuffer=0;tone(360,.09,'triangle');}
+ if(taps.has('KeyZ'))attack('melee');if(taps.has('KeyX'))attack('shoot');
+ if(taps.has('KeyC')&&!p.dodgeCool&&!p.action){p.dodge=.24;p.dodgeCool=.8;burst(p.x,p.y-10,'#8effeb',5);tone(260,.08,'triangle');}
+ if(taps.has('KeyE'))terminal();if(mode!=='play')return;
+ const direction=Number(keys.has('ArrowRight')||keys.has('KeyD'))-Number(keys.has('ArrowLeft')||keys.has('KeyA'));
+ if(direction&&!p.action&&!p.dodge)p.face=direction;
+ const target=p.dodge?p.face*360:direction*(p.action?30:152);const acceleration=p.ground?1500:700;p.vx+=clamp(target-p.vx,-acceleration*dt,acceleration*dt);p.x=clamp(p.x+p.vx*dt,20,world.length-25);p.runClock+=Math.abs(p.vx)*dt/16;
+ const oldY=p.y;p.vy+=950*dt;p.y+=p.vy*dt;p.ground=false;
+ for(const y of surfaces(p.x))if(p.vy>=0&&oldY<=y+.5&&p.y>=y){p.y=y;p.vy=0;p.ground=true;break;}
+ if(p.y>H+90){p.inv=0;damagePlayer(2,p.x);if(mode!=='play')return;const gap=world.gaps.find(([a,b])=>p.x>a-30&&p.x<b+30);p.x=gap?gap[0]-35:90;p.y=FLOOR;p.vy=0;p.inv=1;}
+ p.energyClock+=dt;if(p.energyClock>=2){p.energyClock=0;p.energy=Math.min(6,p.energy+.5);updateHUD();}
+ if(p.action){const a=p.action;a.time+=dt;const contact=a.kind==='shoot'?.2:a.kind==='kick'?.2:.14;
+  if(!a.hit&&a.time>=contact){a.hit=true;if(a.kind==='shoot'){bolts.push({x:p.x+p.face*40,y:p.y-48,vx:p.face*500,life:1.2,enemy:false,damage:3});tone(800,.12,'sawtooth');}
+   else{tone(a.kind==='kick'?170:240,.07,'triangle');for(const e of enemies)if(e.hp>0&&(e.x-p.x)*p.face>-15&&Math.abs(e.x-p.x)<(a.kind==='kick'?87:68)&&Math.abs(e.y-p.y)<65){damageEnemy(e,a.kind==='kick'?4:2,a.kind==='kick'?32:12);p.energy=Math.min(6,p.energy+.25);}updateHUD();}}
+  if(a.time>=a.duration){const queued=p.queue;p.action=null;p.chain=.5;if(queued)attack('melee');}
+ }
+ for(const e of enemies)updateEnemy(e,dt);
+ for(const b of bolts){const before=b.x;b.x+=b.vx*dt;b.life-=dt;if(b.enemy){if(p.x>=Math.min(before,b.x)-11&&p.x<=Math.max(before,b.x)+11&&Math.abs(b.y-(p.y-35))<30){damagePlayer(b.damage,p.x-Math.sign(b.vx));b.life=0;}}
+ else for(const e of enemies)if(e.hp>0&&e.x>=Math.min(before,b.x)-20&&e.x<=Math.max(before,b.x)+20&&Math.abs(b.y-(e.y-(e.type===3?55:25)))<(e.type===3?52:33)){damageEnemy(e,b.damage,9);b.life=0;break;}}
+ bolts=bolts.filter(b=>b.life>0);
+ for(const cell of world.cells)if(!cell.taken&&Math.abs(cell.x-p.x)<26&&Math.abs(cell.y-(p.y-30))<44){cell.taken=true;burst(cell.x,cell.y,ranger.color,15);run.score+=100;tone(620,.13,'triangle');updateHUD();toast('Supply capsule '+world.cells.filter(c=>c.taken).length+'/3');}
+ for(const item of pickups){item.life-=dt;if(Math.abs(item.x-p.x)<25&&Math.abs(item.y-(p.y-20))<45){if(item.kind==='health')p.hp=Math.min(10,p.hp+2);else p.energy=Math.min(6,p.energy+2);item.life=0;tone(480,.09,'triangle');updateHUD();}}
+ pickups=pickups.filter(p=>p.life>0);
+ for(const m of particles){m.life-=dt;m.x+=m.vx*dt;m.y+=m.vy*dt;m.vy+=250*dt;}particles=particles.filter(m=>m.life>0);shake=Math.max(0,shake-dt*22);
+ camera+=(clamp(p.x-W*.38,0,world.length-W)-camera)*Math.min(1,dt*8);
+ if(world.boss&&world.cleared&&enemies.every(e=>e.dead<=0)){finishMission();return;}
+ if(!world.boss&&p.x>world.length-65){if(world.terminal.done)loadZone(zone+1);else if(toastTimer<=0)toast('Restore the station before leaving this zone');}
+}
+function updateEnemy(e,dt){
+ e.clock+=dt;e.hurt=Math.max(0,e.hurt-dt);if(e.hp<=0){e.dead=Math.max(0,e.dead-dt);return;}
+ if(Math.abs(e.x-player.x)>W*.8)return;e.timer-=dt;const dx=player.x-e.x,dist=Math.abs(dx);if(e.state==='approach')e.face=dx>=0?1:-1;
+ if(e.hurt>0)return;
+ const boss=e.type===3;
+ if(e.state==='approach'){
+  const range=e.type===1?240:boss?170:62;
+  if(dist>range){const nx=e.x+e.face*(boss?47:e.type===2?68:48)*dt;if(!world.gaps.some(([a,b])=>nx>a-18&&nx<b+18)){e.x=clamp(nx,35,world.length-35);e.walk+=dt*9;}}
+  if(dist<range+30&&e.timer<=0){e.state='windup';e.timer=boss?.7:.48;e.hit=false;e.attackCount++;e.attack=boss?(e.attackCount%3===0?'blast':'slam'):e.type===1?'spit':e.type===2?'charge':'claw';}
+ }else if(e.state==='windup'&&e.timer<=0){e.state='active';e.timer=e.attack==='charge'?.38:.22;
+  if(e.attack==='blast'||e.attack==='spit'){bolts.push({x:e.x+e.face*35,y:e.y-(boss?49:29),vx:e.face*(boss?250:165),life:2.5,enemy:true,damage:boss?2:1});if(boss&&e.hp<35)bolts.push({x:e.x+e.face*35,y:e.y-90,vx:e.face*220,life:2.5,enemy:true,damage:1});tone(95,.18,'sawtooth');}
+ }else if(e.state==='active'){
+  if(e.attack==='charge'){const nx=e.x+e.face*210*dt;if(!world.gaps.some(([a,b])=>nx>a-15&&nx<b+15))e.x=clamp(nx,35,world.length-35);}
+  if(!e.hit&&e.attack!=='spit'&&e.attack!=='blast'&&Math.abs(e.x-player.x)<(boss?125:55)&&Math.abs(e.y-player.y)<(boss?50:40)){damagePlayer(boss?2:1,e.x);e.hit=true;}
+  if(e.timer<=0){e.state='recover';e.timer=boss?1.1:.65;}
+ }else if(e.state==='recover'&&e.timer<=0){e.state='approach';e.timer=boss?.65:.35;}
+}
+function frameForPlayer(){const p=player;if(p.inv>.68)return 15;if(p.dodge>0)return 11;if(p.action){const a=p.action,t=a.time/a.duration;
+ if(a.kind==='shoot')return t<.28?12:t<.42?13:t<.7?14:13;
+ if(a.kind==='kick')return t<.32?8:t<.7?9:10;
+ return t<.22?4:t<.41?5:t<.7?6:7;
+ }if(!p.ground)return 11;if(Math.abs(p.vx)>15)return [1,2,3,2][Math.floor(p.runClock)%4];return 0;}
+function frameForEnemy(e){if(e.type===3){if(e.hp<=0)return 7;if(e.hurt>0)return 6;if(e.state==='windup')return e.attack==='blast'?4:2;if(e.state==='active')return e.attack==='blast'?5:3;return Math.floor(e.walk)%2;}return e.type*4+(e.state==='windup'?2:e.state==='active'?3:Math.floor(e.walk)%2);}
+function rect(color,x,y,w,h){ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.ceil(w),Math.ceil(h));}
+function text(value,x,y,size=10,color='#e8fff5',align='left'){ctx.font='bold '+size+'px monospace';ctx.textAlign=align;ctx.fillStyle='#081120';ctx.fillText(value,x+1,y+1);ctx.fillStyle=color;ctx.fillText(value,x,y);}
+function drawSprite(id,index,x,y,face=1,alpha=1){const art=atlases[id]?.[index];if(!art)return;ctx.save();ctx.translate(Math.round(x-camera),Math.round(y));ctx.scale(face,1);ctx.globalAlpha=alpha;ctx.drawImage(art,-64,-102);ctx.restore();}
+function drawPlatform(x,y,w,base=false){x-=camera;rect('#0a182b',x,y,w,base?60:18);rect('#6ecbbf',x,y,w,3);rect('#a8fbe1',x+2,y,w-4,1);rect('#324b66',x,y+4,w,base?48:12);rect('#17283e',x,y+13,w,3);
+ for(let j=0;j<w;j+=32){rect('#52788a',x+j+3,y+6,23,2);rect('#0f1f34',x+j+28,y+5,2,base?42:10);rect('#93d5c5',x+j+8,y+10,2,2);if(base){rect('#243c56',x+j+4,y+20,21,22);rect('#405e75',x+j+6,y+22,18,1);rect('#547b84',x+j+10,y+39,9,2);}}
+ if(!base){rect('#42657d',x+7,y+17,5,12);rect('#42657d',x+w-12,y+17,5,12);}}
+function draw(){
+ if(!world||$('screen').hidden)return;ctx.imageSmoothingEnabled=false;ctx.save();ctx.clearRect(0,0,W,H);if(shake)ctx.translate(Math.round((Math.random()-.5)*shake),Math.round((Math.random()-.5)*shake));
+ const bgW=H*environment.width/environment.height,offset=(camera*.26+zone*220)%bgW;ctx.drawImage(environment,-offset,0,bgW,H);ctx.drawImage(environment,bgW-offset,0,bgW,H);rect('#07152655',0,0,W,H);
+ // Fine drifting motes give depth without changing the collision surface.
+ for(let i=0;i<24;i++){const x=((i*79-clock*(4+i%3)-camera*.12)%W+W)%W,y=70+(i*47)%210;rect(i%3?'#80d8d755':'#f9d98a77',x,y,1,1);}
+ let from=0;for(const [a,b]of [...world.gaps,[world.length,world.length]]){if(a>camera&&from<camera+W)drawPlatform(Math.max(from,Math.floor(camera/32)*32),FLOOR,Math.min(a,camera+W+32)-Math.max(from,Math.floor(camera/32)*32),true);from=b;}
+ for(const [x,w,y]of world.platforms)if(x+w>camera&&x<camera+W)drawPlatform(x,y,w);
+ for(const cell of world.cells)if(!cell.taken){const x=cell.x-camera,y=cell.y+Math.sin(clock*3+cell.x)*3;ctx.strokeStyle='#9fffea';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,12,0,Math.PI*2);ctx.stroke();rect('#203e5f',x-6,y-9,12,18);rect(ranger.color,x-4,y-7,8,14);rect('#e6fff4',x-3,y-6,2,8);text(CARGO[ranger.id][zone].toUpperCase(),x,y-18,8,'#d4fff1','center');}
+ if(world.terminal){const t=world.terminal,x=t.x-camera;rect('#10263f',x-21,FLOOR-52,42,52);rect('#6b91a7',x-23,FLOOR-54,46,4);rect(t.done?'#7ef2bf':'#5dc1df',x-16,FLOOR-46,32,23);rect('#1d4c63',x-13,FLOOR-43,26,16);for(let i=0;i<3;i++)rect(t.done?'#b8ffe0':'#92e8ff',x-10,FLOOR-40+i*5,19-i*3,2);rect('#ffd887',x-6,FLOOR-15,12,4);if(Math.abs(player.x-t.x)<80&&!t.done)text('E · '+(world.boss?'Shield control':MISSION_STYLES[ranger.id][0]),x,FLOOR-65,10,'#fff0b2','center');}
+ if(!world.boss){const x=world.length-48-camera;rect('#11273d',x-23,FLOOR-100,46,100);rect(world.terminal.done?'#8bffe2':'#586c87',x-20,FLOOR-97,40,3);rect('#46798b',x-20,FLOOR-94,3,94);rect('#46798b',x+17,FLOOR-94,3,94);rect(world.terminal.done?'#78edce55':'#ff819833',x-16,FLOOR-90,32,90);text('EXIT',x,FLOOR-106,10,'#d8ffed','center');}
+ for(const item of pickups){const x=item.x-camera,y=item.y+Math.sin(clock*5)*2;rect(item.kind==='health'?'#ff9faa':'#8deaff',x-5,y-5,10,10);rect('#fff7e6',x-1,y-3,2,6);if(item.kind==='health')rect('#fff7e6',x-3,y-1,6,2);}
+ for(const e of enemies)if((e.hp>0||e.dead>0)&&Math.abs(e.x-camera-W/2)<W/2+140){ctx.fillStyle='#08132488';ctx.beginPath();ctx.ellipse(e.x-camera,e.y+2,e.type===3?30:23,5,0,0,7);ctx.fill();drawSprite(e.type===3?'phage':'bacteria',frameForEnemy(e),e.x,e.y,-e.face,e.hp?1:Math.min(1,e.dead*3));
+ if(e.type===3&&world.shieldActive&&!world.shieldUnlocked){ctx.strokeStyle='#75e7ff';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(e.x-camera,e.y-55,50,63,0,0,Math.PI*2);ctx.stroke();}
+ if(e.state==='windup')text('!',e.x-camera,e.y-(e.type===3?115:65),19,'#ffdb8a','center');if(e.type!==3&&e.hp<e.max){rect('#17233c',e.x-camera-18,e.y-59,36,3);rect('#d0ed8e',e.x-camera-18,e.y-59,36*e.hp/e.max,3);}}
+ ctx.fillStyle='#08132488';ctx.beginPath();ctx.ellipse(player.x-camera,Math.min(player.y+2,FLOOR+2),22,4,0,0,7);ctx.fill();drawSprite(ranger.id,frameForPlayer(),player.x,player.y,player.face,player.inv>0&&Math.floor(clock*16)%2?.55:1);
+ for(const b of bolts){const x=b.x-camera;rect(b.enemy?'#ee6fb7':'#48cde8',x-Math.sign(b.vx)*17,b.y-3,18,6);rect(b.enemy?'#ffd0ec':'#e1ffff',x-Math.sign(b.vx)*12,b.y-1,14,2);}
+ for(const p of particles){ctx.globalAlpha=clamp(p.life/p.max,0,1);rect(p.color,p.x-camera,p.y,3,3);}ctx.globalAlpha=1;
+ if(comboCount>1)text(comboCount+' HIT',W-18,86,15,'#ffe1a1','right');
+ if(world.boss){const boss=enemies[0];rect('#10172a',150,H-29,340,15);rect('#b63d73',154,H-25,332*boss.hp/boss.max,7);text('PHAGE',W/2,H-34,10,'#ffc0d8','center');}
+ ctx.restore();
+}
+function tick(now){const dt=Math.min((now-last)/1000,.06);last=now;if(mode==='play'){accumulator+=dt;while(accumulator>=1/60&&mode==='play'){step(1/60);taps.clear();accumulator-=1/60;}}else{accumulator=0;taps.clear();}draw();requestAnimationFrame(tick);}
+function keyDown(code){if(!keys.has(code))taps.add(code);keys.add(code);}
+addEventListener('keydown',e=>{if(e.target instanceof HTMLInputElement)return;if(e.code==='Escape'){e.preventDefault();if(!e.repeat)pause();return;}if(e.code==='Enter'&&mode==='dialog'){e.preventDefault();if(!e.repeat)nextLine();return;}if(mode!=='play')return;if(['ArrowLeft','ArrowRight','ArrowUp','Space','KeyA','KeyD','KeyZ','KeyX','KeyC','KeyE'].includes(e.code)){e.preventDefault();keyDown(e.code);}});
+addEventListener('keyup',e=>keys.delete(e.code));addEventListener('blur',()=>{keys.clear();taps.clear();if(mode==='play')pause();});document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='play')pause();});
+for(const button of document.querySelectorAll('[data-key]')){button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture(e.pointerId);keyDown(button.dataset.key);});for(const name of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(name,()=>keys.delete(button.dataset.key));}
+$('next').onclick=nextLine;$('pause').onclick=pause;$('launch').onclick=()=>startMission();$('resume').onclick=()=>startMission(true);$('export').onclick=exportResults;$('student').onchange=()=>{profile.name=$('student').value.trim();save();};$('sound').onclick=()=>{muted=!muted;$('sound').textContent=muted?'Sound off':'Sound on';};
+load().catch(error=>{$('loading').textContent='Artwork could not load. Reopen the downloaded HTML file to try again.';console.error(error);});

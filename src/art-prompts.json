@@ -1,0 +1,40 @@
+{
+  "mode": "Built-in image generation",
+  "rangerPrompt": "Create production sprite animation atlas of exactly the character in reference. Preserve helmet, suit colors, armor, chest emblem, boots, gloves and athletic proportions precisely. Polished arcade pixel art like reference, crisp shaded clusters. Transparent background. EXACT 4 columns by 4 rows, SIXTEEN equal cells, one full-body character per cell, generous empty margins, no overlap, all facing RIGHT, identical scale. Row 1: idle guard; run left leg forward; run passing legs; run right leg forward. Row 2: punch windup fist pulled back; half-extended punch; fully extended straight punch; punch recovery. Row 3: kick windup raised knee; extended side kick; kick recovery; airborne jump tucked knees. Row 4: drawing silver futuristic LASER PISTOL; aiming that pistol horizontally right; firing that pistol with tiny cyan muzzle flash; hurt recoil. Keep entire body and gun inside each cell. No labels no text no floor no shadows outside figure. 4x4 square sheet. This is animation of SAME character in every cell, not redesign.",
+  "identityReference": "assets/<ranger>-approved.png",
+  "poseReference": "assets/ribosome-sheet.png",
+  "frames": [
+    "idle",
+    "run stride A",
+    "run passing",
+    "run stride B",
+    "punch windup",
+    "punch extension",
+    "punch contact",
+    "punch recovery",
+    "kick windup",
+    "kick contact",
+    "kick recovery",
+    "jump",
+    "draw blaster",
+    "aim blaster",
+    "fire blaster",
+    "hurt"
+  ],
+  "characters": [
+    "ribosome",
+    "atp",
+    "rougher",
+    "golgi",
+    "cytoplasm",
+    "membrane",
+    "mito",
+    "nucleus",
+    "smoother",
+    "lysosome",
+    "dna",
+    "rna",
+    "mitosis",
+    "crispr"
+  ]
+}

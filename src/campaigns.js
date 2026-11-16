@@ -14,22 +14,6 @@ const RANGERS = [
 {id:'mitosis',name:'Mitosis',color:'#f188d7',title:'One cell, two futures',role:'Separate duplicated chromosomes',intro:'Duplicated chromosomes must reach opposite sides safely. Restore the spindle and protect the order of division.',zones:['Spindle assembly','Metaphase line','Anaphase corridor'],tasks:[['Prepare division','Use chromosomes already duplicated in S phase','Duplicate DNA during every mitosis step','Discard all sister chromatids','DNA is normally replicated during S phase before mitosis begins.'],['Line up the copies','Align chromosomes at the cell’s middle','Send all copies to one side','Break every chromosome into bases','During metaphase, chromosomes align before their sister chromatids separate.'],['Separate and finish','Move sister chromatids apart, then divide the cytoplasm','Keep both copies on one side','Call cytokinesis DNA replication','Mitosis separates duplicated chromosomes. Cytokinesis divides the cytoplasm.']],boss:'Phage has trapped the spindle controls. Free both sets of chromosomes so the daughter cells can form.'},
 {id:'crispr',name:'CRISPR',color:'#6bf4dc',title:'Find the invader',role:'Guide-directed defense',intro:'In this bacterial defense mission, recognize a matching invader sequence and guide a Cas protein to the target.',zones:['Sequence archive','Guide-RNA station','Target checkpoint'],tasks:[['Recall the invader','Use stored sequence information','Recognize every virus by color','Destroy all DNA without checking','Natural CRISPR systems in many bacteria and archaea use sequence information in defense.'],['Guide the defense','Use guide RNA to direct a Cas protein','Use a ribosome as the guide molecule','Use ATP as the complete genetic message','A guide RNA helps direct a Cas protein toward a matching target sequence.'],['Verify the target','Check sequence matching and system requirements','Cut every DNA molecule nearby','Assume every guide works perfectly','Targeting depends on sequence recognition and other requirements that vary across CRISPR systems.']],boss:'Phage has reached the target checkpoint. Verify the guide sequence and break his defense core.'}
 ];
-const QUIZ = {
- atp:['What is ATP’s main role here?',['Transfer usable energy for cellular work','Store all hereditary information','Digest worn-out organelles'],0],
- ribosome:['What does a matching tRNA deliver?',['A chromosome','An amino acid','A finished cell membrane'],1],
- rougher:['Where does much rough-ER cargo go next?',['To the Golgi','Into DNA','Out through a nuclear pore'],0],
- golgi:['What does the Golgi do with cargo?',['Replicates its DNA','Modifies, sorts and packages it','Turns it all into ATP'],1],
- cytoplasm:['What is cytosol?',['The fluid portion of cytoplasm','The DNA inside the nucleus','A stack of Golgi membranes'],0],
- membrane:['Which transport process needs an energy input?',['Simple diffusion','Active transport against a gradient','Water moving down its gradient'],1],
- mito:['What drives ATP synthase?',['A proton gradient','The color of glucose','A DNA base pair'],0],
- nucleus:['What process makes RNA from a DNA template?',['Translation','Transcription','Cytokinesis'],1],
- smoother:['Which task fits smooth ER?',['Lipid synthesis','Chromosome separation','mRNA translation on attached ribosomes'],0],
- lysosome:['What helps lysosomes digest cargo?',['An acidic interior and digestive enzymes','A spindle','A ribosome-sized nucleus'],0],
- dna:['Which base pairs with adenine in DNA?',['Uracil','Thymine','Cytosine'],1],
- rna:['Which RNA carries instructions to a ribosome?',['mRNA','tRNA','Only rRNA'],0],
- mitosis:['What separates during anaphase?',['Sister chromatids','Amino acids in a protein','Phospholipids in a bilayer'],0],
- crispr:['What helps guide a Cas protein to a target?',['Guide RNA','A transport vesicle','A lysosomal enzyme'],0]
-};
 const CARGO = {
  atp:['ADP + phosphate','ATP carriers','ADP returns'],ribosome:['mRNA fragments','Amino acids','Release factors'],
  rougher:['New proteins','Folding supplies','Cargo vesicles'],golgi:['ER cargo','Address labels','Shipping vesicles'],

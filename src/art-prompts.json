@@ -36,5 +36,17 @@
     "rna",
     "mitosis",
     "crispr"
-  ]
+  ],
+  "enemySheets": {
+    "layout": "4 columns x 3 rows, facing LEFT; rows = variants (melee, ranged, charger); columns = walk A, walk B, windup, attack",
+    "styleReference": "assets/bacteria-sheet.png",
+    "prompts": "See ENEMY-ART-PROMPTS.md",
+    "files": [
+      "retrovirus-sheet.png",
+      "mutant-sheet.png",
+      "misfolded-sheet.png",
+      "radical-sheet.png",
+      "miniphage-sheet.png"
+    ]
+  }
 }

@@ -64,8 +64,8 @@ const BASE_ICON={A:'#ff5c6c',T:'#ffd23f',G:'#3ddc84',C:'#4aa3ff',U:'#b47cff'};
 const MOLECULE_ART={
  phosphate(g){mBall(g,0,0,7,'#ffb347','#6b3a05',1.4);for(const [x,y]of [[0,-10],[10,0],[0,10],[-10,0]]){mLine(g,[[0,0],[x*.75,y*.75]],'#ffe0b0',2);mBall(g,x,y,3.4,'#ff6b6b','#5a0c0c');}mText(g,'P',0,0,9,'#3a1d00',900);},
  adp(g){mAdenosine(g,-8,-3);mLine(g,[[-1,5],[12,5]],'#ffe0b0',1.6);mPhos(g,4,5);mPhos(g,12,5);},
- atp(g){mAdenosine(g,-10,-3);mLine(g,[[-3,5],[14,5]],'#ffe0b0',1.6);mPhos(g,1,5,4);mPhos(g,8,5,4);mPhos(g,15,5,4);mLine(g,[[11,-6],[8,-1],[12,-2],[9,3]],'#fff27a',1.6);},
- adpPi(g){mAdenosine(g,-10,-5);mLine(g,[[-3,3],[9,3]],'#ffe0b0',1.6);mPhos(g,2,3,4);mPhos(g,9,3,4);mText(g,'+',4,11,9,'#e8f6ff');mPhos(g,12,12,4);},
+ atp(g){mAdenosine(g,-12,-3);mLine(g,[[-5,5],[12,5]],'#ffe0b0',1.6);mPhos(g,-1,5,4);mPhos(g,6,5,4);mPhos(g,13,5,4);mLine(g,[[9,-9],[6,-4],[10,-5],[7,0]],'#fff27a',1.6);},
+ adpPi(g){mAdenosine(g,-10,-8);mLine(g,[[-3,0],[10,0]],'#ffe0b0',1.6);mPhos(g,3,0,4);mPhos(g,10,0,4);mText(g,'+',-3,11,10,'#e8f6ff');mPhos(g,6,11,4);},
  mrna(g){g.beginPath();for(let x=-14;x<=14;x++)g.lineTo(x,Math.sin(x/4)*3-3);g.strokeStyle='#c9b0ff';g.lineWidth=2.4;g.stroke();'AUGGCUA'.split('').forEach((b,i)=>{const x=-12+i*4;mLine(g,[[x,Math.sin(x/4)*3-3],[x,Math.sin(x/4)*3+6]],BASE_ICON[b],2.6);});},
  trna(g){g.save();g.translate(0,8);g.scale(.27,.27);g.beginPath();g.moveTo(-14,0);g.lineTo(-14,-26);g.quadraticCurveTo(-34,-30,-32,-46);g.quadraticCurveTo(-22,-58,-10,-48);g.lineTo(-8,-66);g.lineTo(8,-66);g.lineTo(10,-48);g.quadraticCurveTo(22,-58,32,-46);g.quadraticCurveTo(34,-30,14,-26);g.lineTo(14,0);g.closePath();g.fillStyle='#3b2a6e';g.fill();g.strokeStyle='#b99cff';g.lineWidth=5;g.stroke();g.restore();
   ['#ff5c6c','#3ddc84','#4aa3ff'].forEach((c,i)=>{g.fillStyle=c;g.fillRect(-5+i*3.6,8,3,4);});mLine(g,[[0,-10],[0,-13]],'#b99cff',1.6);mBall(g,0,-15,4,'#ffd36b','#7a5a10');},

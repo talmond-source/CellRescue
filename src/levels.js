@@ -69,8 +69,8 @@ const PUZZLE_KIND={ribosome:'sequence',dna:'sequence',rna:'sequence',mitosis:'se
 const PAIR={A:'T',T:'A',G:'C',C:'G'},RNA_PAIR={A:'U',T:'A',G:'C',C:'G'},CODON_TRNA={AUG:'UAC',GGC:'CCG',UUU:'AAA',UAA:'STOP'},CODON_AA={AUG:'Met',GGC:'Gly',UUU:'Phe'};
 const PHASES=['prophase','metaphase','anaphase','telophase'];
 function sequenceConfig(id,r){
- if(id==='dna'){const t=['TAC','GATC','CGTAA'][r];return {title:'BASE-PAIR BRIDGE',prompt:'Template  '+t.split('').join(' '),answer:t.split('').map(b=>PAIR[b]),options:['A','T','G','C'],line:'Build the matching strand',hint:'A pairs with T, and G pairs with C.'};}
- if(id==='rna'){const t=['TAC','GCAT','TACGT'][r];return {title:'TRANSCRIPTION GATE',prompt:'DNA template  '+t.split('').join(' '),answer:t.split('').map(b=>RNA_PAIR[b]),options:['A','U','G','C','T'],line:'Build the mRNA copy',hint:'RNA pairs U with A and has no T. G pairs with C.'};}
+ if(id==='dna'){const t=['TAC','GATC','CGTAA'][r];return {template:t,title:'BASE-PAIR BRIDGE',prompt:'Template  '+t.split('').join(' '),answer:t.split('').map(b=>PAIR[b]),options:['A','T','G','C'],line:'Build the matching strand',hint:'A pairs with T, and G pairs with C.'};}
+ if(id==='rna'){const t=['TAC','GCAT','TACGT'][r];return {template:t,rna:true,title:'TRANSCRIPTION GATE',prompt:'DNA template  '+t.split('').join(' '),answer:t.split('').map(b=>RNA_PAIR[b]),options:['A','U','G','C','T'],line:'Build the mRNA copy',hint:'RNA pairs U with A and has no T. G pairs with C.'};}
  if(id==='ribosome'){const c=[['AUG','GGC'],['AUG','UUU','GGC'],['AUG','GGC','UUU','UAA']][r];return {title:'TRANSLATION BAY',prompt:'mRNA  '+c.join(' '),answer:c.map(x=>CODON_TRNA[x]),options:['UAC','CCG','AAA','AUG','STOP'],line:'Send the tRNA that pairs with each codon',hint:'An anticodon pairs with the codon: A with U, G with C. A stop codon gets the release factor.',codons:c};}
  if(id==='mitosis'){const a=[['metaphase'],['prophase','metaphase','anaphase'],PHASES.slice()][r];return {title:'SPINDLE CONTROL',prompt:r===0?'Find metaphase':'Put the stages in order',answer:a,options:PHASES.slice(),line:r===0?'Hit the cell in metaphase':'Hit the stages in the order they happen',hint:'Prophase → metaphase → anaphase → telophase. Metaphase lines chromosomes up in the middle.',pictures:true};}
  if(id==='crispr'){const guides=[['AUGCC'],['GCAUU','CCGAU'],['UAGCG','AACGU']][r];
@@ -94,7 +94,7 @@ const CARRY={
    {id:'golgi',label:'TO GOLGI',icon:'vesicleGold',x:430,accept:{vesicleOrange:{count:true,say:'Vesicle sent to the Golgi'}},reject:'Fold the protein in the ER first.'}],
   hint:'Ribosome → rough ER → vesicle → Golgi.'}),
  golgi:r=>{const all=[['digest','Digestive enzymes'],['membraneProtein','Membrane protein'],['vesicleGold','Hormone to secrete']];const items=all.slice(0,r+1);
-  return {title:'SORTING CISTERNAE',line:'Send each cargo to the right address',goal:items.length,items:items.map(([k],i)=>[k,60+i*42]),labels:Object.fromEntries(all),
+  return {title:'SORTING CISTERNAE',line:'Send each cargo to the right address',goal:items.length,items:items.map(([k],i)=>[k,40+i*72]),labels:Object.fromEntries(all),
   machines:[{id:'lyso',label:'TO LYSOSOME',icon:'digest',x:250,accept:{digest:{count:true,consume:true,say:'Enzymes delivered to the lysosome'}},reject:'Lysosomes take digestive enzymes.'},
    {id:'mem',label:'TO MEMBRANE',icon:'membraneProtein',x:350,accept:{membraneProtein:{count:true,consume:true,say:'Protein built into the membrane'}},reject:'The membrane takes membrane proteins.'},
    {id:'out',label:'OUT OF CELL',icon:'vesicleGold',x:450,accept:{vesicleGold:{count:true,consume:true,say:'Hormone secreted'}},reject:'Only secreted cargo leaves the cell.'}],
@@ -104,13 +104,13 @@ const CARRY={
    {id:'mito',label:'MITOCHONDRION',icon:'pyruvate',x:430,accept:{pyruvate:{count:true,say:'Pyruvate delivered'}},reject:'Mitochondria take pyruvate, not glucose. Split it in the cytosol first.'}],
   hint:'Glucose is split into pyruvate in the cytosol. Then pyruvate goes to the mitochondrion.'}),
  membrane:r=>{const all=[['o2','Oxygen (O₂)'],['glucose','Glucose'],['ions','Na⁺ ions']];const items=all.slice(0,r+1);
-  return {title:'PUMP CONTROL',line:'Move each molecule across the right way',goal:items.length,items:items.map(([k],i)=>[k,60+i*42]),labels:Object.fromEntries(all),
+  return {title:'PUMP CONTROL',line:'Move each molecule across the right way',goal:items.length,items:items.map(([k],i)=>[k,40+i*72]),labels:Object.fromEntries(all),
   machines:[{id:'bilayer',label:'THROUGH BILAYER',icon:'phospholipid',x:250,accept:{o2:{count:true,consume:true,say:'Small O₂ slips straight through the bilayer'}},reject:'Only small, uncharged molecules pass straight through.'},
    {id:'channel',label:'CARRIER PROTEIN',icon:'glucose',x:350,accept:{glucose:{count:true,consume:true,say:'Glucose crosses through a carrier protein'}},reject:'Carrier proteins move glucose down its gradient.'},
    {id:'pump',label:'ATP PUMP',icon:'atp',x:450,accept:{ions:{count:true,consume:true,say:'The pump spends ATP to move Na⁺ uphill'}},reject:'Pumps move ions against their gradient.'}],
   hint:'O₂ crosses the bilayer, glucose needs a carrier, and Na⁺ is pumped using ATP.'};},
  nucleus:r=>{const all=[['mrna','mRNA'],['dnaHelix','Chromosomal DNA'],['histone','Histones']];const items=all.slice(0,r+1);
-  return {title:'PORE CHECKPOINT',line:'Only the right cargo leaves through the pore',goal:items.length,items:items.map(([k],i)=>[k,60+i*42]),labels:Object.fromEntries(all),
+  return {title:'PORE CHECKPOINT',line:'Only the right cargo leaves through the pore',goal:items.length,items:items.map(([k],i)=>[k,40+i*72]),labels:Object.fromEntries(all),
   machines:[{id:'pore',label:'NUCLEAR PORE',icon:'mrna',x:300,accept:{mrna:{count:true,consume:true,say:'mRNA exported to the ribosomes'}},reject:'DNA and histones stay inside the nucleus.'},
    {id:'chromatin',label:'CHROMATIN STORE',icon:'histone',x:440,accept:{dnaHelix:{count:true,consume:true,say:'DNA stays safe in the nucleus'},histone:{count:true,consume:true,say:'Histones pack the DNA'}},reject:'mRNA must leave the nucleus to be read.'}],
   hint:'mRNA leaves through nuclear pores. DNA and its histones stay inside.'};}
@@ -166,6 +166,7 @@ function updateLevel(dt){
  }
  // hazard pools hurt on contact
  if(p.ground&&p.y>=FLOOR-.5&&p.inv<=0&&p.dodge<=0&&w.hazards.some(([a,b])=>p.x>a+4&&p.x<b-4)){damagePlayer(1,p.x+p.face*20);if(mode==='play'){p.vy=-260;p.ground=false;burst(p.x,FLOOR-4,'#e08cff',8);}}
+ w.hudClock=(w.hudClock||0)+dt;if(w.hudClock>.25){w.hudClock=0;updateHUD();}
  if(w.style==='combat')updateArenas(dt);
  if(w.style==='puzzle')for(const room of w.rooms)updateRoom(room,dt);
 }
@@ -267,9 +268,7 @@ const ITEM_NAMES={adp:'ADP',atp:'ATP',polypeptide:'a new protein chain',vesicleO
 function itemName(key,room){return room?.cfg?.labels?.[key]||ITEM_NAMES[key]||key;}
 function puzzleObjective(){
  const room=world.rooms.find(r=>!r.solved);if(!room)return null;
- if(room.kind==='sequence')return room.cfg.title+' · '+room.pos+'/'+room.cfg.answer.length;
- if(room.kind==='carry')return room.cfg.title+' · '+room.count+'/'+room.cfg.goal;
- return room.cfg.title+' · '+room.cfg.label;
+ return 'Lock '+(room.r+1)+'/3';
 }
 
 /* ---------- Drawing ---------- */
@@ -288,13 +287,14 @@ function drawLevelBack(){
  if(w.style==='puzzle')for(const room of w.rooms)drawRoom(room);
  for(const ar of w.arenas)if(ar.state==='fight')for(const x of [ar.a,ar.b]){const sx=x-camera;for(let y=60;y<FLOOR;y+=6){rect(Math.floor(clock*12+y/6)%2?'#ff5d8f':'#ffb3cc',sx-2,y,4,3);}rect('#ff5d8f33',sx-8,60,16,FLOOR-60);}
  for(const it of w.items){const x=it.x-camera;if(x<-30||x>W+30)continue;const icon=moleculeIcon(it.key);ctx.save();ctx.imageSmoothingEnabled=true;ctx.drawImage(icon,Math.round(x-17),Math.round(it.y-17+Math.sin(clock*4+it.x)*2));ctx.restore();
-  if(Math.abs(it.x-player.x)<30&&!player.carry)text('E · pick up',x,it.y-22,8,'#fff0b2','center');}
+  const room=world.rooms[it.room];const name=room?.cfg?.labels?.[it.key];const lift=name&&world.items.indexOf(it)%2?10:0;if(name)text(name.toUpperCase(),x,it.y-24-lift,7,'#d4fff1','center');
+  if(Math.abs(it.x-player.x)<30&&!player.carry)text('E · pick up',x,it.y-(name?34:24),8,'#fff0b2','center');}
 }
 function drawMoverPlatform(m){const x=m.x-camera,y=m.y;rect('#0a182b',x,y,m.w,14);rect(m.kind==='muscle'?'#ff8fa8':'#ffd36b',x,y,m.w,3);rect('#324b66',x,y+4,m.w,8);
  for(let j=6;j<m.w-6;j+=12)rect('#5b7a91',x+j,y+6,6,2);if(m.kind!=='ferry'){rect('#d8e6ef',x+m.w/2-1,0,0,0);}}
 function drawSign(x,y,w,title,lines,color='#7cf7df'){
  x-=camera;if(x+w/2<0||x-w/2>W)return;rect('#06101ecc',x-w/2,y,w,14+lines.length*12);rect(color,x-w/2,y,w,2);text(title,x,y+11,8,color,'center');
- lines.forEach((l,i)=>text(l,x,y+24+i*12,9,'#e8f6ff','center'));rect('#2f4a63',x-2,y+14+lines.length*12,4,FLOOR-(y+14+lines.length*12));}
+ lines.forEach((l,i)=>text(l,x,y+24+i*12,9,'#e8f6ff','center'));rect('#2f4a63',x-w/2+10,0,2,y);rect('#2f4a63',x+w/2-12,0,2,y);}
 function drawRoom(room){
  const cfg=room.cfg,a=room.a;
  // the room's gate
@@ -303,12 +303,7 @@ function drawRoom(room){
  else if(!room.wall.open){rect('#0d1b2e',gx-10,70,20,FLOOR-70);for(let y=74;y<FLOOR;y+=10)rect(room.flash>0?'#ff6b8a':ranger.color,gx-8,y,16,4);text('LOCKED',gx,64,8,'#ffd887','center');}
  else if(!room.solved){rect('#9effc455',gx-10,70,20,FLOOR-70);}
  if(room.kind==='sequence'){
-  const built=cfg.answer.slice(0,room.pos);
-  let lines=[cfg.prompt];
-  if(cfg.codons)lines.push('Chain  '+(cfg.codons.slice(0,room.pos).map(c=>CODON_AA[c]||'release').join('–')||'…'));
-  else if(cfg.pictures)lines.push(room.pos?'Done  '+room.pos+'/'+cfg.answer.length:'Order  ? → ?');
-  else lines.push('Built  '+(built.join(' ')||'')+' '+'_ '.repeat(cfg.answer.length-room.pos));
-  drawSign(a+260,96,300,cfg.title,lines.concat([cfg.line]),room.solved?'#9effc4':'#7cf7df');
+  drawBoard(room);
   for(const s of room.switches)drawSwitch(s,room);
  }
  if(room.kind==='carry'){
@@ -319,19 +314,50 @@ function drawRoom(room){
  if(room.kind==='meter'){
   const v=cfg.variant,pct=room.meter/100;
   const label=v==='dissolve'?'pH '+(7.2-2.2*pct).toFixed(1):cfg.label+' '+Math.round(room.meter)+'%';
-  drawSign(a+300,62,320,cfg.title,[cfg.line.length>52?cfg.line.slice(0,cfg.line.indexOf('.')+1):cfg.line,label],room.solved?'#9effc4':'#7cf7df');
-  const mx=a+300-camera-100;rect('#0b1424',mx,104+12,200,8);rect(v==='dissolve'?'#ff7a9a':'#ffd36b',mx+1,104+13,198*pct,6);
+  drawSign(a+(v==='lift'?175:300),62,v==='lift'?300:320,cfg.title,[cfg.line.length>52?cfg.line.slice(0,cfg.line.indexOf('.')+1):cfg.line,label],room.solved?'#9effc4':'#7cf7df');
+  const mx=a+(v==='lift'?175:300)-camera-100;rect('#0b1424',mx,104+12,200,8);rect(v==='dissolve'?'#ff7a9a':'#ffd36b',mx+1,104+13,198*pct,6);
   if(v==='gate'){const t=cfg.threshold/100*200;rect('#ffffff',mx+t,112,2,16);}
   if(v==='gate'&&!room.solved){const gx2=room.wall.x-camera;ctx.save();ctx.translate(gx2,FLOOR-130);ctx.rotate(clock*(room.wall.open?8:.4));for(let k=0;k<6;k++){ctx.rotate(Math.PI/3);rect('#ffbd6d',-2,-22,4,22);}ctx.restore();text('ATP SYNTHASE',gx2,FLOOR-160,8,'#ffd9a8','center');}
-  if(v==='dissolve'&&!room.solved){const gx2=room.wall.x-camera;ctx.save();ctx.globalAlpha=.9;ctx.drawImage(moleculeIcon('repair'),gx2-17,FLOOR-150);ctx.restore();text('BLOCKAGE',gx2,FLOOR-158,8,'#ffc0d0','center');}
+  if(v==='dissolve'&&!room.solved){const gx2=room.wall.x-camera,melt=pct;
+   // a clog of worn-out organelle debris; it sags and pales as the acid builds
+   for(let k=0;k<9;k++){const bx=gx2+((k*37)%3-1)*12,by=FLOOR-14-k*22+melt*k*5,rx=15-k%2*3,ry=9;ctx.fillStyle=k%3===0?'#7a4a2c':k%3===1?'#5c3a2a':'#8a6a50';ctx.globalAlpha=1-melt*.45;ctx.beginPath();ctx.ellipse(bx,by,rx,ry,(k%2?.4:-.3),0,7);ctx.fill();ctx.strokeStyle='#c99a6e';ctx.lineWidth=1;ctx.stroke();ctx.strokeStyle='#3a2216';ctx.beginPath();ctx.moveTo(bx-rx+4,by);for(let q=0;q<4;q++)ctx.lineTo(bx-rx+6+q*(rx-3)/2,by+(q%2?3:-3));ctx.stroke();}
+   ctx.globalAlpha=1;text('WORN-OUT DEBRIS',gx2,FLOOR-212,8,'#ffc0d0','center');}
   for(const s of room.switches)drawSwitch(s,room);
  }
+}
+/* Sequence puzzles get a picture board: colored bases, codons, chains and stage thumbnails. */
+function blocks(seq,cx,y,size=15,gap=2,ghost=false){const n=seq.length,x0=cx-(n*(size+gap)-gap)/2;
+ for(let i=0;i<n;i++){const b=seq[i],x=x0+i*(size+gap);if(b==='_'){ctx.strokeStyle='#7d93a8';ctx.setLineDash([2,2]);ctx.strokeRect(Math.round(x)+.5,y+.5,size-1,size-1);ctx.setLineDash([]);continue;}
+  rect(BASE_ICON[b]||'#9fb6c8',x,y,size,size);rect('#0b1424',x,y+size-2,size,2);text(b,x+size/2,y+size-4,size-5,'#0b1424','center');}
+ return x0;}
+function drawBoard(room){
+ const cfg=room.cfg,cx=room.a+260-camera,y=64,w=330,h=88;if(cx+w/2<0||cx-w/2>W)return;
+ const done=room.solved,color=done?'#9effc4':room.flash>0?'#ff6b8a':'#7cf7df';
+ rect('#2f4a63',cx-w/2+12,0,2,y);rect('#2f4a63',cx+w/2-14,0,2,y);
+ rect('#06101ee6',cx-w/2,y,w,h);rect(color,cx-w/2,y,w,2);text(cfg.title,cx,y+12,8,color,'center');
+ const label=(s,yy)=>text(s,cx-w/2+8,yy,8,'#a9c7d8','left');
+ if(cfg.template){
+  label('TEMPLATE',y+31);blocks(cfg.template,cx+20,y+20);
+  const built=cfg.answer.map((b,i)=>i<room.pos?b:'_').join('');label(cfg.rna?'mRNA':'NEW',y+52);blocks(built,cx+20,y+41);
+  for(let i=0;i<cfg.template.length;i++){const x0=cx+20-(cfg.template.length*17-2)/2+i*17+7;rect('#4b6275',x0,y+36,1,4);}
+ }else if(cfg.codons){
+  label('mRNA',y+31);const n=cfg.codons.length;cfg.codons.forEach((c,i)=>{const gx=cx+20+(i-(n-1)/2)*58;blocks(c,gx,y+20,14,1);if(i===room.pos&&!done){ctx.strokeStyle='#ffd36b';ctx.strokeRect(Math.round(gx-25)+.5,y+18.5,50,18);}});
+  label('CHAIN',y+56);cfg.codons.slice(0,room.pos).forEach((c,i)=>{const gx=cx+20+(i-(n-1)/2)*58;if(CODON_AA[c]){ctx.fillStyle='#ffd36b';ctx.beginPath();ctx.arc(gx,y+52,8,0,7);ctx.fill();text(CODON_AA[c],gx,y+55,7,'#2b1d04','center');if(i)rect('#ffd36b',gx-50,y+51,42,2);}else text('RELEASED!',gx,y+55,8,'#9effc4','center');});
+ }else if(cfg.guides){
+  const step=Math.min(room.pos,cfg.guides.length-1);label('GUIDE RNA',y+31);blocks(cfg.guides[step],cx+30,y+20);
+  label('CUT',y+56);text(done?'All targets cut!':'Target '+(room.pos+1)+' of '+cfg.guides.length+' — find its partner DNA',cx+30,y+56,8,'#e8f6ff','center');
+ }else if(cfg.pictures){
+  label('ORDER',y+40);const n=cfg.answer.length;cfg.answer.forEach((st,i)=>{const gx=cx+20+(i-(n-1)/2)*52;rect('#0b1a2c',gx-22,y+20,44,36);
+   if(i<room.pos){ctx.save();ctx.translate(gx,y+38);ctx.scale(.3,.3);dgMitosisCell(ctx,0,0,st,52);ctx.restore();}else text('?',gx,y+43,14,'#ffd36b','center');
+   if(i<n-1)text('→',gx+26,y+42,9,'#a9c7d8','center');});
+ }
+ text(cfg.line,cx,y+h-10,9,'#e8f6ff','center');
 }
 function drawSwitch(s,room){
  const x=s.x-camera,base=switchBase(room,s),w=s.w||34,h=room.cfg.pictures?52:30;if(x<-60||x>W+60)return;
  const glow=s.good>0?'#9effc4':s.flash>0?'#ff6b8a':s.cool>0?'#4b6275':'#ffd36b';
  rect('#0b1a2c',x-w/2,base-h-6,w,h+6);rect(glow,x-w/2,base-h-6,w,3);rect('#1b3550',x-w/2+3,base-h-1,w-6,h-2);
- if(s.lift){rect('#2f4a63',x-2,base-26,4,26);rect(s.cool>0?'#33485a':'#ff8fa8',x-7,base-36,14,12);text('Ca²⁺',x,base-27,7,'#1b0d14','center');text('Z · '+room.cfg.pumpLabel,x,base-42,8,'#fff0b2','center');return;}
+ if(s.lift){rect('#2f4a63',x-2,base-26,4,26);rect(s.cool>0?'#33485a':'#ff8fa8',x-7,base-36,14,12);text('Ca²⁺',x,base-27,7,'#1b0d14','center');text('Z · '+room.cfg.pumpLabel,x,base+24,8,'#fff0b2','center');return;}
  if(room.kind==='meter'){text(room.cfg.pumpLabel,x,base-h-12,8,'#fff0b2','center');rect(s.cool>0?'#33485a':'#ff8fa8',x-7,base-h+6,14,14);text('Z',x,base-h+17,9,'#1b0d14','center');return;}
  if(room.cfg.pictures){ctx.save();ctx.translate(x,base-h/2-2);ctx.scale(.36,.36);dgMitosisCell(ctx,0,0,s.value,52);ctx.restore();return;}
  const v=s.value,col=v.length===1?(BASE_ICON[v]||'#ffd36b'):'#e8f6ff';

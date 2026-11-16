@@ -3,6 +3,20 @@
 Each Ranger now fights an enemy family that matches its biology. Until a family's own sheet is added,
 the game borrows the bacteria art with a color shift as a stand-in. These prompts make the real sheets.
 
+## Status
+
+| Family | Sheet | In the game |
+|---|---|---|
+| Retroviruses | `retrovirus-sheet.png` | ✅ real art |
+| Mutated cells | `mutant-sheet.png` | ✅ real art |
+| Free radicals | `radical-sheet.png` (delivered as `03_prion.png`) | ✅ real art |
+| Mini-phages | `miniphage-sheet.png` | ✅ real art |
+| Misfolded proteins | `misfolded-sheet.png` | ⏳ still the color-shifted stand-in — prompt 3 below |
+
+Originals are kept as `src/assets/<family>-sheet-original.png`. `src/tools/clean_enemy_sheet.py` removes backgrounds
+(including fake checkerboards), haze and detached effects, then re-centers every creature on a shared baseline:
+`python3 src/tools/clean_enemy_sheet.py original.png src/packed/<family>-sheet.png`.
+
 ## How to make each sheet
 
 1. Open ChatGPT (image generation) and attach **`bacteria-sheet.png`** (in `src/assets/`). It is the style and layout reference.

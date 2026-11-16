@@ -97,6 +97,8 @@ const MOLECULE_ART={
  kinetochore(g){if(typeof dgChromosome==='function')dgChromosome(g,0,2,1,'#ff8fd0',0);g.fillStyle='#ffd36b';g.fillRect(-8,-1,4,6);g.fillRect(4,-1,4,6);mLine(g,[[-6,2],[-15,-10]],'#cfe3ff',1);mLine(g,[[6,2],[15,-10]],'#cfe3ff',1);},
  chromosome(g){if(typeof dgChromosome==='function')dgChromosome(g,0,0,1.25,'#8fd0ff',0);},
  viralDNA(g){for(let x=-14;x<=14;x+=1){const y1=Math.sin(x/4)*6,y2=-y1;if(x%4===0)mLine(g,[[x,y1],[x,y2]],'#ffd36b',1.2);}g.beginPath();for(let x=-14;x<=14;x++)g.lineTo(x,Math.sin(x/4)*6);g.strokeStyle='#ff5c8a';g.lineWidth=2.2;g.stroke();g.beginPath();for(let x=-14;x<=14;x++)g.lineTo(x,-Math.sin(x/4)*6);g.strokeStyle='#c86bff';g.stroke();},
+ dnaHelix(g){for(let x=-14;x<=14;x+=1){const y1=Math.sin(x/4)*6;if(x%4===0)mLine(g,[[x,y1],[x,-y1]],BASE_ICON['ATGC'[((x+16)/4|0)%4]],1.4);}g.beginPath();for(let x=-14;x<=14;x++)g.lineTo(x,Math.sin(x/4)*6);g.strokeStyle='#4aa3ff';g.lineWidth=2.2;g.stroke();g.beginPath();for(let x=-14;x<=14;x++)g.lineTo(x,-Math.sin(x/4)*6);g.stroke();},
+ membraneProtein(g){for(let x=-14;x<=14;x+=5){mBall(g,x,-8,2.4,'#f7a8c8','#9c4f73',.6);mBall(g,x,8,2.4,'#f7a8c8','#9c4f73',.6);}g.fillStyle='#f3d77a';g.fillRect(-15,-5,30,10);g.beginPath();g.ellipse(0,0,7,12,0,0,Math.PI*2);g.fillStyle='#4f8fe0';g.fill();g.strokeStyle='#bcd8ff';g.lineWidth=1.2;g.stroke();},
  guideRNA(g){mLine(g,[[-14,8],[2,8],[8,2],[8,-8],[2,-12],[-4,-8],[-4,-2]],'#c9b0ff',2.4);'AUGCC'.split('').forEach((b,i)=>{g.fillStyle=BASE_ICON[b];g.fillRect(-14+i*3.4,10,3,4);});},
  cas9(g){mBall(g,-5,0,10,'#2bb5a4','#bffff3',1.4);mBall(g,7,1,8,'#1f8f84','#bffff3',1.4);mLine(g,[[-9,-3],[1,-3],[4,1]],'#c9b0ff',2);mLine(g,[[-15,7],[15,7]],'#4aa3ff',1.6);mLine(g,[[-15,10],[15,10]],'#4aa3ff',1.6);}
 };

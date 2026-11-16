@@ -142,6 +142,28 @@ function dgChromosome(g, x, y, s = 1, color = '#ff8fd0', rot = 0, single = false
  g.lineCap = 'butt'; g.restore();
 }
 
+function dgMitosisCell(g, cx, cy, stage, r = 52) {
+ const pink = '#ff8fd0', blue = '#8fd0ff';
+   if (stage === 'telophase') {
+    dgEll(g, cx - 28, cy, 42, 46, 0, '#1c4a5c', DGC.cytoEdge, 3); dgEll(g, cx + 28, cy, 42, 46, 0, '#1c4a5c', DGC.cytoEdge, 3); dgRect(g, cx - 6, cy - 34, 12, 68, 4, '#1c4a5c');
+    for (const s of [-1, 1]) { dgEll(g, cx + s * 34, cy, 18, 16, 0, '#3a2668', '#b48cff', 1.5); dgLine(g, [[cx + s * 34 - 8, cy - 4], [cx + s * 34 + 6, cy + 5]], pink, 2.4); dgLine(g, [[cx + s * 34 - 6, cy + 6], [cx + s * 34 + 7, cy - 6]], blue, 2.4); }
+    return;
+   }
+   const stretch = stage === 'anaphase' ? 1.18 : 1;
+   dgEll(g, cx, cy, r * stretch, r, 0, '#1c4a5c', DGC.cytoEdge, 3);
+   const L = cx - r * stretch + 10, R = cx + r * stretch - 10;
+   if (stage !== 'prophase') { dgCirc(g, L, cy, 3.5, '#ffe7a0'); dgCirc(g, R, cy, 3.5, '#ffe7a0'); }
+   if (stage === 'prophase') {
+    dgEll(g, cx, cy, r * .62, r * .56, 0, null, '#b48cff', 1.5, [4, 4]);
+    [[-14, -12, .4], [12, -16, -.6], [-10, 14, -.3], [16, 12, .8]].forEach(([dx, dy, rot], i) => dgChromosome(g, cx + dx, cy + dy, .9, i % 2 ? blue : pink, rot));
+    dgCirc(g, cx - 22, cy - r + 14, 3.5, '#ffe7a0'); dgCirc(g, cx - 8, cy - r + 10, 3.5, '#ffe7a0');
+   } else if (stage === 'metaphase') {
+    [-27, -9, 9, 27].forEach((dy, i) => { dgLine(g, [[L, cy], [cx - 6, cy + dy]], '#cfe3ff88', 1); dgLine(g, [[R, cy], [cx + 6, cy + dy]], '#cfe3ff88', 1); dgChromosome(g, cx, cy + dy, .85, i % 2 ? blue : pink, Math.PI / 2); });
+   } else if (stage === 'anaphase') {
+    [-24, -8, 8, 24].forEach((dy, i) => { const c = i % 2 ? blue : pink; for (const s of [-1, 1]) { const x = cx + s * r * .62; dgLine(g, [[s < 0 ? L : R, cy], [x, cy + dy * .8]], '#cfe3ff88', 1); g.save(); g.translate(x, cy + dy * .8); g.lineCap = 'round'; dgLine(g, [[-s * 9, -5], [0, 0], [-s * 9, 5]], c, 3.2); g.restore(); } });
+   }
+  }
+
 /* ---------- the diagrams ---------- */
 const DIAGRAMS = {
  /* overview animal cell; o.marks = {A:'nucleus', ...}; o.highlight = 'cytoplasm' */
@@ -533,26 +555,7 @@ const DIAGRAMS = {
  },
  mitosis(g, o) {
   const pink = '#ff8fd0', blue = '#8fd0ff';
-  const cellAt = (cx, cy, stage, r = 52) => {
-   if (stage === 'telophase') {
-    dgEll(g, cx - 28, cy, 42, 46, 0, '#1c4a5c', DGC.cytoEdge, 3); dgEll(g, cx + 28, cy, 42, 46, 0, '#1c4a5c', DGC.cytoEdge, 3); dgRect(g, cx - 6, cy - 34, 12, 68, 4, '#1c4a5c');
-    for (const s of [-1, 1]) { dgEll(g, cx + s * 34, cy, 18, 16, 0, '#3a2668', '#b48cff', 1.5); dgLine(g, [[cx + s * 34 - 8, cy - 4], [cx + s * 34 + 6, cy + 5]], pink, 2.4); dgLine(g, [[cx + s * 34 - 6, cy + 6], [cx + s * 34 + 7, cy - 6]], blue, 2.4); }
-    return;
-   }
-   const stretch = stage === 'anaphase' ? 1.18 : 1;
-   dgEll(g, cx, cy, r * stretch, r, 0, '#1c4a5c', DGC.cytoEdge, 3);
-   const L = cx - r * stretch + 10, R = cx + r * stretch - 10;
-   if (stage !== 'prophase') { dgCirc(g, L, cy, 3.5, '#ffe7a0'); dgCirc(g, R, cy, 3.5, '#ffe7a0'); }
-   if (stage === 'prophase') {
-    dgEll(g, cx, cy, r * .62, r * .56, 0, null, '#b48cff', 1.5, [4, 4]);
-    [[-14, -12, .4], [12, -16, -.6], [-10, 14, -.3], [16, 12, .8]].forEach(([dx, dy, rot], i) => dgChromosome(g, cx + dx, cy + dy, .9, i % 2 ? blue : pink, rot));
-    dgCirc(g, cx - 22, cy - r + 14, 3.5, '#ffe7a0'); dgCirc(g, cx - 8, cy - r + 10, 3.5, '#ffe7a0');
-   } else if (stage === 'metaphase') {
-    [-27, -9, 9, 27].forEach((dy, i) => { dgLine(g, [[L, cy], [cx - 6, cy + dy]], '#cfe3ff88', 1); dgLine(g, [[R, cy], [cx + 6, cy + dy]], '#cfe3ff88', 1); dgChromosome(g, cx, cy + dy, .85, i % 2 ? blue : pink, Math.PI / 2); });
-   } else if (stage === 'anaphase') {
-    [-24, -8, 8, 24].forEach((dy, i) => { const c = i % 2 ? blue : pink; for (const s of [-1, 1]) { const x = cx + s * r * .62; dgLine(g, [[s < 0 ? L : R, cy], [x, cy + dy * .8]], '#cfe3ff88', 1); g.save(); g.translate(x, cy + dy * .8); g.lineCap = 'round'; dgLine(g, [[-s * 9, -5], [0, 0], [-s * 9, 5]], c, 3.2); g.restore(); } });
-   }
-  };
+  const cellAt = (cx, cy, stage, r = 52) => dgMitosisCell(g, cx, cy, stage, r);
   if (o.mode === 'count') {
    cellAt(140, 130, 'metaphase', 62); dgText(g, '4 chromosomes', 140, 214, 13, DGC.ink, 'center', 750); dgText(g, 'parent cell', 140, 232, 11, DGC.soft);
    dgArrow(g, 220, 130, 300, 130, DGC.ink, 3); dgText(g, 'mitosis', 260, 112, 12, '#9ef6e6', 'center', 750);

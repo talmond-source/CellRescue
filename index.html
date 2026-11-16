@@ -66,15 +66,6 @@ button.ghost{background:transparent;border-color:#3f6378;color:#a6bdd0;font-size
 {id:'mitosis',name:'Mitosis',color:'#f188d7',title:'One cell, two futures',role:'Separate duplicated chromosomes',intro:'Duplicated chromosomes must reach opposite sides safely. Restore the spindle and protect the order of division.',zones:['Spindle assembly','Metaphase line','Anaphase corridor'],tasks:[['Prepare division','Use chromosomes already duplicated in S phase','Duplicate DNA during every mitosis step','Discard all sister chromatids','DNA is normally replicated during S phase before mitosis begins.'],['Line up the copies','Align chromosomes at the cell’s middle','Send all copies to one side','Break every chromosome into bases','During metaphase, chromosomes align before their sister chromatids separate.'],['Separate and finish','Move sister chromatids apart, then divide the cytoplasm','Keep both copies on one side','Call cytokinesis DNA replication','Mitosis separates duplicated chromosomes. Cytokinesis divides the cytoplasm.']],boss:'Phage has trapped the spindle controls. Free both sets of chromosomes so the daughter cells can form.'},
 {id:'crispr',name:'CRISPR',color:'#6bf4dc',title:'Find the invader',role:'Guide-directed defense',intro:'In this bacterial defense mission, recognize a matching invader sequence and guide a Cas protein to the target.',zones:['Sequence archive','Guide-RNA station','Target checkpoint'],tasks:[['Recall the invader','Use stored sequence information','Recognize every virus by color','Destroy all DNA without checking','Natural CRISPR systems in many bacteria and archaea use sequence information in defense.'],['Guide the defense','Use guide RNA to direct a Cas protein','Use a ribosome as the guide molecule','Use ATP as the complete genetic message','A guide RNA helps direct a Cas protein toward a matching target sequence.'],['Verify the target','Check sequence matching and system requirements','Cut every DNA molecule nearby','Assume every guide works perfectly','Targeting depends on sequence recognition and other requirements that vary across CRISPR systems.']],boss:'Phage has reached the target checkpoint. Verify the guide sequence and break his defense core.'}
 ];
-const CARGO = {
- atp:['ADP + phosphate','ATP carriers','ADP returns'],ribosome:['mRNA fragments','Amino acids','Release factors'],
- rougher:['New proteins','Folding supplies','Cargo vesicles'],golgi:['ER cargo','Address labels','Shipping vesicles'],
- cytoplasm:['Dissolved nutrients','Enzyme supplies','Transport cargo'],membrane:['Phospholipids','Channel proteins','ATP supplies'],
- mito:['Fuel products','Electron carriers','ADP + phosphate'],nucleus:['Repair supplies','RNA building blocks','mRNA cargo'],
- smoother:['Lipid precursors','Enzyme supplies','Calcium cargo'],lysosome:['Damaged cargo','Digestive enzymes','Reusable parts'],
- dna:['DNA bases','New nucleotides','Repair supplies'],rna:['RNA bases','mRNA cargo','tRNA supplies'],
- mitosis:['Spindle supplies','Attachment proteins','Division supplies'],crispr:['Sequence records','Guide RNA','Cas proteins']
-};
 </script><script>/* Bio-scan questions. Each Ranger has five, asked in order:
    zone 1 station, zone 2 station, zone 3 station, Phage shield station, final debrief.
    Every question has a diagram (see diagrams.js): d = diagram name, o = what to show.
@@ -608,6 +599,28 @@ function dgChromosome(g, x, y, s = 1, color = '#ff8fd0', rot = 0, single = false
  g.lineCap = 'butt'; g.restore();
 }
 
+function dgMitosisCell(g, cx, cy, stage, r = 52) {
+ const pink = '#ff8fd0', blue = '#8fd0ff';
+   if (stage === 'telophase') {
+    dgEll(g, cx - 28, cy, 42, 46, 0, '#1c4a5c', DGC.cytoEdge, 3); dgEll(g, cx + 28, cy, 42, 46, 0, '#1c4a5c', DGC.cytoEdge, 3); dgRect(g, cx - 6, cy - 34, 12, 68, 4, '#1c4a5c');
+    for (const s of [-1, 1]) { dgEll(g, cx + s * 34, cy, 18, 16, 0, '#3a2668', '#b48cff', 1.5); dgLine(g, [[cx + s * 34 - 8, cy - 4], [cx + s * 34 + 6, cy + 5]], pink, 2.4); dgLine(g, [[cx + s * 34 - 6, cy + 6], [cx + s * 34 + 7, cy - 6]], blue, 2.4); }
+    return;
+   }
+   const stretch = stage === 'anaphase' ? 1.18 : 1;
+   dgEll(g, cx, cy, r * stretch, r, 0, '#1c4a5c', DGC.cytoEdge, 3);
+   const L = cx - r * stretch + 10, R = cx + r * stretch - 10;
+   if (stage !== 'prophase') { dgCirc(g, L, cy, 3.5, '#ffe7a0'); dgCirc(g, R, cy, 3.5, '#ffe7a0'); }
+   if (stage === 'prophase') {
+    dgEll(g, cx, cy, r * .62, r * .56, 0, null, '#b48cff', 1.5, [4, 4]);
+    [[-14, -12, .4], [12, -16, -.6], [-10, 14, -.3], [16, 12, .8]].forEach(([dx, dy, rot], i) => dgChromosome(g, cx + dx, cy + dy, .9, i % 2 ? blue : pink, rot));
+    dgCirc(g, cx - 22, cy - r + 14, 3.5, '#ffe7a0'); dgCirc(g, cx - 8, cy - r + 10, 3.5, '#ffe7a0');
+   } else if (stage === 'metaphase') {
+    [-27, -9, 9, 27].forEach((dy, i) => { dgLine(g, [[L, cy], [cx - 6, cy + dy]], '#cfe3ff88', 1); dgLine(g, [[R, cy], [cx + 6, cy + dy]], '#cfe3ff88', 1); dgChromosome(g, cx, cy + dy, .85, i % 2 ? blue : pink, Math.PI / 2); });
+   } else if (stage === 'anaphase') {
+    [-24, -8, 8, 24].forEach((dy, i) => { const c = i % 2 ? blue : pink; for (const s of [-1, 1]) { const x = cx + s * r * .62; dgLine(g, [[s < 0 ? L : R, cy], [x, cy + dy * .8]], '#cfe3ff88', 1); g.save(); g.translate(x, cy + dy * .8); g.lineCap = 'round'; dgLine(g, [[-s * 9, -5], [0, 0], [-s * 9, 5]], c, 3.2); g.restore(); } });
+   }
+  }
+
 /* ---------- the diagrams ---------- */
 const DIAGRAMS = {
  /* overview animal cell; o.marks = {A:'nucleus', ...}; o.highlight = 'cytoplasm' */
@@ -999,26 +1012,7 @@ const DIAGRAMS = {
  },
  mitosis(g, o) {
   const pink = '#ff8fd0', blue = '#8fd0ff';
-  const cellAt = (cx, cy, stage, r = 52) => {
-   if (stage === 'telophase') {
-    dgEll(g, cx - 28, cy, 42, 46, 0, '#1c4a5c', DGC.cytoEdge, 3); dgEll(g, cx + 28, cy, 42, 46, 0, '#1c4a5c', DGC.cytoEdge, 3); dgRect(g, cx - 6, cy - 34, 12, 68, 4, '#1c4a5c');
-    for (const s of [-1, 1]) { dgEll(g, cx + s * 34, cy, 18, 16, 0, '#3a2668', '#b48cff', 1.5); dgLine(g, [[cx + s * 34 - 8, cy - 4], [cx + s * 34 + 6, cy + 5]], pink, 2.4); dgLine(g, [[cx + s * 34 - 6, cy + 6], [cx + s * 34 + 7, cy - 6]], blue, 2.4); }
-    return;
-   }
-   const stretch = stage === 'anaphase' ? 1.18 : 1;
-   dgEll(g, cx, cy, r * stretch, r, 0, '#1c4a5c', DGC.cytoEdge, 3);
-   const L = cx - r * stretch + 10, R = cx + r * stretch - 10;
-   if (stage !== 'prophase') { dgCirc(g, L, cy, 3.5, '#ffe7a0'); dgCirc(g, R, cy, 3.5, '#ffe7a0'); }
-   if (stage === 'prophase') {
-    dgEll(g, cx, cy, r * .62, r * .56, 0, null, '#b48cff', 1.5, [4, 4]);
-    [[-14, -12, .4], [12, -16, -.6], [-10, 14, -.3], [16, 12, .8]].forEach(([dx, dy, rot], i) => dgChromosome(g, cx + dx, cy + dy, .9, i % 2 ? blue : pink, rot));
-    dgCirc(g, cx - 22, cy - r + 14, 3.5, '#ffe7a0'); dgCirc(g, cx - 8, cy - r + 10, 3.5, '#ffe7a0');
-   } else if (stage === 'metaphase') {
-    [-27, -9, 9, 27].forEach((dy, i) => { dgLine(g, [[L, cy], [cx - 6, cy + dy]], '#cfe3ff88', 1); dgLine(g, [[R, cy], [cx + 6, cy + dy]], '#cfe3ff88', 1); dgChromosome(g, cx, cy + dy, .85, i % 2 ? blue : pink, Math.PI / 2); });
-   } else if (stage === 'anaphase') {
-    [-24, -8, 8, 24].forEach((dy, i) => { const c = i % 2 ? blue : pink; for (const s of [-1, 1]) { const x = cx + s * r * .62; dgLine(g, [[s < 0 ? L : R, cy], [x, cy + dy * .8]], '#cfe3ff88', 1); g.save(); g.translate(x, cy + dy * .8); g.lineCap = 'round'; dgLine(g, [[-s * 9, -5], [0, 0], [-s * 9, 5]], c, 3.2); g.restore(); } });
-   }
-  };
+  const cellAt = (cx, cy, stage, r = 52) => dgMitosisCell(g, cx, cy, stage, r);
   if (o.mode === 'count') {
    cellAt(140, 130, 'metaphase', 62); dgText(g, '4 chromosomes', 140, 214, 13, DGC.ink, 'center', 750); dgText(g, 'parent cell', 140, 232, 11, DGC.soft);
    dgArrow(g, 220, 130, 300, 130, DGC.ink, 3); dgText(g, 'mitosis', 260, 112, 12, '#9ef6e6', 'center', 750);
@@ -1069,6 +1063,458 @@ const DIAGRAMS = {
 function drawDiagram(canvas, name, o) {
  const g = canvas.getContext('2d'); g.setTransform(canvas.width / DGW, 0, 0, canvas.height / DGH, 0, 0); g.clearRect(0, 0, DGW, DGH);
  dgBg(g); (DIAGRAMS[name] || (() => {}))(g, o || {});
+}
+</script><script>/* The three molecules each Ranger collects, one kind per zone: [name, icon, fact shown on pickup]. */
+const MOLECULES = {
+ atp:[['Phosphate groups','phosphate','Phosphate groups are what ATP adds and removes to store and release energy.'],
+      ['ADP','adp','ADP has two phosphates. Adding a third recharges it into ATP.'],
+      ['Charged ATP','atp','ATP carries three phosphates. Breaking off the last one powers cell work.']],
+ ribosome:[['mRNA strands','mrna','mRNA carries a gene’s message from the nucleus to the ribosome.'],
+      ['tRNA + amino acids','trna','Each tRNA brings one amino acid and reads one codon.'],
+      ['Release factors','release','Release factors read stop codons and free the finished protein.']],
+ rougher:[['Polypeptide chains','polypeptide','A new protein enters the rough ER as a chain of amino acids.'],
+      ['Sugar tags','sugar','Sugar chains added in the ER help label and fold the protein.'],
+      ['Transport vesicles','vesicleOrange','Vesicles bud off the ER and carry proteins to the Golgi.']],
+ golgi:[['ER vesicles','vesicleOrange','Vesicles from the ER deliver new proteins to the Golgi.'],
+      ['Sugar tags','sugar','The Golgi edits sugar tags like shipping labels.'],
+      ['Shipping vesicles','vesicleGold','Shipping vesicles leave the Golgi for the membrane, lysosomes or outside the cell.']],
+ cytoplasm:[['Glucose','glucose','Glucose is the cell’s main fuel. It is split in the cytosol first.'],
+      ['Enzymes','enzyme','Enzymes in the cytosol speed up reactions such as glycolysis.'],
+      ['Pyruvate','pyruvate','Glycolysis splits one glucose into two pyruvate molecules.']],
+ membrane:[['Phospholipids','phospholipid','Phospholipids have water-loving heads and water-fearing tails.'],
+      ['Cholesterol','cholesterol','Cholesterol tucks between phospholipids and keeps the membrane flexible.'],
+      ['Na⁺ / K⁺ ions','ions','The sodium-potassium pump uses ATP to move these ions against their gradients.']],
+ mito:[['Pyruvate','pyruvate','Pyruvate from glycolysis enters the mitochondrion as fuel.'],
+      ['Oxygen (O₂)','o2','Oxygen accepts electrons at the end of the electron transport chain.'],
+      ['ADP + phosphate','adpPi','ATP synthase joins ADP and phosphate into ATP.']],
+ nucleus:[['Nucleotides','nucleotide','Nucleotides are the building blocks of DNA and RNA.'],
+      ['Histones','histone','DNA wraps around histone proteins to pack into chromatin.'],
+      ['mRNA','mrna','mRNA copies of genes leave the nucleus through nuclear pores.']],
+ smoother:[['Fatty acids','fattyAcid','Smooth ER builds lipids from fatty acids.'],
+      ['Toxin molecules','toxin','Smooth ER enzymes help break down drugs and toxins.'],
+      ['Ca²⁺ ions','calcium','Smooth ER stores calcium and releases it as a signal.']],
+ lysosome:[['Digestive enzymes','digest','Lysosomes are packed with enzymes that break molecules apart.'],
+      ['H⁺ ions','proton','Pumping in H⁺ ions keeps the lysosome acidic, about pH 5.'],
+      ['Recycled amino acids','aminoAcid','Digested proteins become amino acids the cell can reuse.']],
+ dna:[['DNA nucleotides','dnaBase','DNA nucleotides carry the bases A, T, G and C.'],
+      ['DNA polymerase','polymerase','DNA polymerase builds a new strand by matching base pairs.'],
+      ['Repair enzymes','repair','Repair enzymes find and fix mismatched base pairs.']],
+ rna:[['RNA nucleotides','rnaBase','RNA nucleotides use uracil (U) instead of thymine (T).'],
+      ['mRNA','mrna','mRNA is the working copy of a gene that ribosomes read.'],
+      ['tRNA','trna','tRNA reads codons and delivers amino acids.']],
+ mitosis:[['Tubulin','tubulin','Tubulin proteins link up into the spindle fibers.'],
+      ['Kinetochore proteins','kinetochore','Kinetochores attach chromosomes to the spindle.'],
+      ['Chromosomes','chromosome','Each duplicated chromosome is two identical sister chromatids.']],
+ crispr:[['Viral DNA snippets','viralDNA','Bacteria store snippets of viral DNA as a memory of past infections.'],
+      ['Guide RNA','guideRNA','Guide RNA is copied from the stored snippets and matches the virus.'],
+      ['Cas9','cas9','Cas9 cuts DNA wherever its guide RNA finds a match.']]
+};
+const CARGO = Object.fromEntries(Object.entries(MOLECULES).map(([id,list])=>[id,list.map(m=>m[0])]));
+const MOLECULE_SIZE=34;
+const moleculeCache={};
+/* Each icon is drawn once into a small canvas at the game's own pixel scale, then reused. */
+function moleculeIcon(key,variant=0){
+ const id=key+':'+variant;if(moleculeCache[id])return moleculeCache[id];
+ const c=document.createElement('canvas');c.width=c.height=MOLECULE_SIZE;const g=c.getContext('2d');
+ g.translate(MOLECULE_SIZE/2,MOLECULE_SIZE/2);g.lineJoin='round';g.lineCap='round';
+ (MOLECULE_ART[key]||MOLECULE_ART.phosphate)(g,variant);
+ return moleculeCache[id]=c;
+}
+const mBall=(g,x,y,r,fill,edge='#0b1424',lw=1)=>{g.beginPath();g.arc(x,y,r,0,Math.PI*2);g.fillStyle=fill;g.fill();if(edge){g.strokeStyle=edge;g.lineWidth=lw;g.stroke();}};
+const mLine=(g,pts,color,lw=2)=>{g.beginPath();g.moveTo(...pts[0]);for(const p of pts.slice(1))g.lineTo(...p);g.strokeStyle=color;g.lineWidth=lw;g.stroke();};
+const mText=(g,s,x,y,size,color='#fff',weight=800)=>{g.font=weight+' '+size+'px system-ui,sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillStyle=color;g.fillText(s,x,y+.5);};
+const mRing=(g,x,y,r,sides,fill,edge,rot=Math.PI/6)=>{g.beginPath();for(let i=0;i<sides;i++){const a=rot+i/sides*Math.PI*2;g.lineTo(x+Math.cos(a)*r,y+Math.sin(a)*r);}g.closePath();g.fillStyle=fill;g.fill();g.strokeStyle=edge;g.lineWidth=1.4;g.stroke();};
+const mPhos=(g,x,y,r=4.6)=>{mBall(g,x,y,r,'#ffb347','#6b3a05');mText(g,'P',x,y,r*1.35,'#3a1d00',900);};
+const mAdenosine=(g,x,y)=>{mRing(g,x-3,y,4.6,6,'#5b8cff','#1a2d66');mRing(g,x+4.2,y,3.6,5,'#5b8cff','#1a2d66',0);mRing(g,x+5,y+8,4,5,'#f4d35e','#6b5410',-Math.PI/2);};
+const BASE_ICON={A:'#ff5c6c',T:'#ffd23f',G:'#3ddc84',C:'#4aa3ff',U:'#b47cff'};
+const MOLECULE_ART={
+ phosphate(g){mBall(g,0,0,7,'#ffb347','#6b3a05',1.4);for(const [x,y]of [[0,-10],[10,0],[0,10],[-10,0]]){mLine(g,[[0,0],[x*.75,y*.75]],'#ffe0b0',2);mBall(g,x,y,3.4,'#ff6b6b','#5a0c0c');}mText(g,'P',0,0,9,'#3a1d00',900);},
+ adp(g){mAdenosine(g,-8,-3);mLine(g,[[-1,5],[12,5]],'#ffe0b0',1.6);mPhos(g,4,5);mPhos(g,12,5);},
+ atp(g){mAdenosine(g,-10,-3);mLine(g,[[-3,5],[14,5]],'#ffe0b0',1.6);mPhos(g,1,5,4);mPhos(g,8,5,4);mPhos(g,15,5,4);mLine(g,[[11,-6],[8,-1],[12,-2],[9,3]],'#fff27a',1.6);},
+ adpPi(g){mAdenosine(g,-10,-5);mLine(g,[[-3,3],[9,3]],'#ffe0b0',1.6);mPhos(g,2,3,4);mPhos(g,9,3,4);mText(g,'+',4,11,9,'#e8f6ff');mPhos(g,12,12,4);},
+ mrna(g){g.beginPath();for(let x=-14;x<=14;x++)g.lineTo(x,Math.sin(x/4)*3-3);g.strokeStyle='#c9b0ff';g.lineWidth=2.4;g.stroke();'AUGGCUA'.split('').forEach((b,i)=>{const x=-12+i*4;mLine(g,[[x,Math.sin(x/4)*3-3],[x,Math.sin(x/4)*3+6]],BASE_ICON[b],2.6);});},
+ trna(g){g.save();g.translate(0,8);g.scale(.27,.27);g.beginPath();g.moveTo(-14,0);g.lineTo(-14,-26);g.quadraticCurveTo(-34,-30,-32,-46);g.quadraticCurveTo(-22,-58,-10,-48);g.lineTo(-8,-66);g.lineTo(8,-66);g.lineTo(10,-48);g.quadraticCurveTo(22,-58,32,-46);g.quadraticCurveTo(34,-30,14,-26);g.lineTo(14,0);g.closePath();g.fillStyle='#3b2a6e';g.fill();g.strokeStyle='#b99cff';g.lineWidth=5;g.stroke();g.restore();
+  ['#ff5c6c','#3ddc84','#4aa3ff'].forEach((c,i)=>{g.fillStyle=c;g.fillRect(-5+i*3.6,8,3,4);});mLine(g,[[0,-10],[0,-13]],'#b99cff',1.6);mBall(g,0,-15,4,'#ffd36b','#7a5a10');},
+ release(g){g.beginPath();g.moveTo(-9,10);g.lineTo(-9,-2);g.quadraticCurveTo(-12,-12,0,-13);g.quadraticCurveTo(12,-12,9,-2);g.lineTo(9,10);g.closePath();g.fillStyle='#c0394f';g.fill();g.strokeStyle='#ffb0bd';g.lineWidth=1.4;g.stroke();mText(g,'STOP',0,1,6.5,'#fff',900);},
+ polypeptide(g){const c=['#3ddc84','#ffd36b','#ff8fb0','#4aa3ff','#b47cff','#ff9f43'];let pts=[];for(let i=0;i<6;i++)pts.push([-13+i*5.2,Math.sin(i*1.3)*6]);mLine(g,pts,'#e8f6ff',1.4);pts.forEach(([x,y],i)=>mBall(g,x,y,3.3,c[i]));},
+ sugar(g){const h=(x,y)=>mRing(g,x,y,4.2,6,'#ff9fd0','#7a2050');mLine(g,[[0,10],[0,2],[-7,-5],[0,2],[7,-5],[7,-12]],'#ffd6ea',1.4);h(0,9);h(0,1);h(-7,-6);h(7,-6);h(7,-13);},
+ vesicleOrange(g){mBall(g,0,0,12,'#c46a2c55','#ffb071',2.4);mBall(g,0,0,9.5,null,'#ffb07188',1);mBall(g,-3,-2,3,'#3ddc84');mBall(g,3,3,2.5,'#ffd36b');},
+ vesicleGold(g){mBall(g,0,0,12,'#e5b33c44','#fff0b0',2.4);mBall(g,0,0,9.5,null,'#fff0b088',1);mRing(g,-3,1,3,6,'#ff9fd0','#7a2050');mBall(g,4,-2,2.6,'#4aa3ff');},
+ glucose(g){mRing(g,0,0,11,6,'#ffe27a','#7a5b10');const a=-Math.PI/2+Math.PI/6;mBall(g,Math.cos(-Math.PI/6-Math.PI/3)*11,Math.sin(-Math.PI/6-Math.PI/3)*11,3,'#ff6b6b','#5a0c0c');mText(g,'C₆',0,1,8,'#5a4005',900);},
+ enzyme(g){g.beginPath();g.arc(0,0,11,.55,Math.PI*2-.55);g.lineTo(4,0);g.closePath();g.fillStyle='#2bb5a4';g.fill();g.strokeStyle='#bffff3';g.lineWidth=1.4;g.stroke();mRing(g,10,0,3.6,6,'#ffe27a','#7a5b10');},
+ pyruvate(g){const C=[[-9,2],[0,-2],[9,2]];mLine(g,C,'#cfd8e3',2);C.forEach(([x,y])=>mBall(g,x,y,4,'#3b4554','#cfd8e3'));mBall(g,0,-10,3.4,'#ff6b6b','#5a0c0c');mBall(g,14,-4,3.4,'#ff6b6b','#5a0c0c');mBall(g,13,8,3.4,'#ff6b6b','#5a0c0c');mBall(g,-14,8,2.2,'#e8f6ff');},
+ phospholipid(g){mLine(g,[[-3,-3],[-4,5],[-2,13]],'#f3d77a',2.4);mLine(g,[[3,-3],[2,5],[4,13]],'#f3d77a',2.4);mBall(g,0,-7,6.5,'#f7a8c8','#9c4f73',1.2);},
+ cholesterol(g){mRing(g,-9,3,4.6,6,'#f3d77a','#6b5410');mRing(g,-1,-1,4.6,6,'#f3d77a','#6b5410');mRing(g,7,3,4.6,6,'#f3d77a','#6b5410');mRing(g,14,-2,3.8,5,'#f3d77a','#6b5410',0);mBall(g,-15,0,2.4,'#ff6b6b');mLine(g,[[17,-5],[19,-12]],'#f3d77a',2);},
+ ions(g){mBall(g,-6,-3,8,'#b57bff','#3d1d6e',1.2);mText(g,'Na⁺',-6,-3,7,'#fff');mBall(g,7,6,8.5,'#ff9f43','#6b3a05',1.2);mText(g,'K⁺',7,6,7.5,'#3a1d00');},
+ o2(g){mBall(g,-6,0,8,'#ff5c6c','#5a0c0c',1.2);mBall(g,6,0,8,'#ff5c6c','#5a0c0c',1.2);mLine(g,[[-2,-2.5],[2,-2.5]],'#fff',1.4);mLine(g,[[-2,2.5],[2,2.5]],'#fff',1.4);mText(g,'O',-6,0,7,'#fff');mText(g,'O',6,0,7,'#fff');},
+ nucleotide(g,v){const b='AGCU'[v%4];mLine(g,[[-8,6],[0,2],[8,-4]],'#e8f6ff',1.6);mPhos(g,-9,7,4.2);mRing(g,0,2,4.4,5,'#f4d35e','#6b5410',-Math.PI/2);g.fillStyle=BASE_ICON[b];g.fillRect(5,-12,9,12);g.strokeStyle='#0b1424';g.strokeRect(5,-12,9,12);mText(g,b,9.5,-6,8);},
+ dnaBase(g,v){const b='ATGC'[v%4];MOLECULE_ART.nucleotide(g,'AGCU'.indexOf(b)<0?0:0);g.fillStyle=BASE_ICON[b];g.fillRect(5,-12,9,12);g.strokeStyle='#0b1424';g.strokeRect(5,-12,9,12);mText(g,b,9.5,-6,8);},
+ rnaBase(g,v){const b='AUGC'[v%4];MOLECULE_ART.nucleotide(g,0);g.fillStyle=BASE_ICON[b];g.fillRect(5,-12,9,12);g.strokeStyle='#0b1424';g.strokeRect(5,-12,9,12);mText(g,b,9.5,-6,8);},
+ histone(g){for(const [x,y]of [[-5,-4],[5,-4],[-5,5],[5,5]])mBall(g,x,y,5.4,'#4f8fe0','#bcd8ff',1);g.beginPath();g.ellipse(0,0,13,9,-.35,0,Math.PI*2);g.strokeStyle='#ffd36b';g.lineWidth=2;g.stroke();},
+ fattyAcid(g){mLine(g,[[-14,4],[-10,-2],[-6,4],[-2,-2],[2,4],[6,-2],[10,4]],'#f3d77a',2.4);mBall(g,13,-1,3.3,'#ff6b6b','#5a0c0c');mBall(g,13,7,2.6,'#ff6b6b','#5a0c0c');},
+ toxin(g){mRing(g,-3,2,8,6,'#9be15d','#2f5a0c');mBall(g,7,-8,5,'#c86bff','#3d1d6e');mLine(g,[[3,-4],[5,-6]],'#e8f6ff',1.4);mText(g,'!',-3,2,11,'#24420a',900);},
+ calcium(g){mBall(g,0,0,10,'#e8eef5','#7c8ea3',1.4);mText(g,'Ca²⁺',0,0,7,'#2a3a4c',900);},
+ proton(g){mBall(g,0,0,9,'#ff6b6b','#5a0c0c',1.4);mText(g,'H⁺',0,0,9,'#fff',900);},
+ aminoAcid(g){mLine(g,[[0,0],[0,10]],'#e8f6ff',1.6);mBall(g,0,0,6,'#3ddc84','#0d4a2a',1.2);mBall(g,-9,-3,3,'#4aa3ff');mBall(g,9,-3,3,'#ff6b6b');mBall(g,0,11,3.4,'#ffd36b');mText(g,'aa',0,0,6,'#062b17',900);},
+ digest(g){g.beginPath();g.arc(0,0,11,.7,Math.PI*2-.7);g.lineTo(2,0);g.closePath();g.fillStyle='#d24a78';g.fill();g.strokeStyle='#ffc0d4';g.lineWidth=1.4;g.stroke();mBall(g,11,-2,2.4,'#3ddc84');mBall(g,14,3,2.4,'#ffd36b');},
+ polymerase(g){mLine(g,[[-15,0],[15,0]],'#4aa3ff',2);for(let x=-13;x<=13;x+=4)mLine(g,[[x,-4],[x,4]],BASE_ICON['ATGC'[(x+13)/4%4|0]],1.6);mLine(g,[[-15,-5],[15,-5]],'#4aa3ff',1.6);mLine(g,[[-15,5],[15,5]],'#ff9f43',1.6);g.beginPath();g.arc(2,0,10,Math.PI*.15,Math.PI*1.85);g.strokeStyle='#7ff1e2';g.lineWidth=5;g.stroke();},
+ repair(g){mLine(g,[[-15,-5],[15,-5]],'#4aa3ff',1.8);mLine(g,[[-15,5],[15,5]],'#4aa3ff',1.8);for(let x=-12;x<=12;x+=4)mLine(g,[[x,-4],[x,4]],x===0?'#ff5c6c':'#9fb6c8',1.6);mBall(g,0,-11,6,'#2bb5a4','#bffff3',1.2);mLine(g,[[5,-14],[9,-17]],'#fff27a',1.4);mLine(g,[[7,-9],[11,-9]],'#fff27a',1.4);},
+ tubulin(g){for(let i=0;i<7;i++){mBall(g,-12+i*4,-3,2.6,i%2?'#3ddc84':'#9effc4','#0d4a2a',.8);mBall(g,-10+i*4,3,2.6,i%2?'#9effc4':'#3ddc84','#0d4a2a',.8);}},
+ kinetochore(g){if(typeof dgChromosome==='function')dgChromosome(g,0,2,1,'#ff8fd0',0);g.fillStyle='#ffd36b';g.fillRect(-8,-1,4,6);g.fillRect(4,-1,4,6);mLine(g,[[-6,2],[-15,-10]],'#cfe3ff',1);mLine(g,[[6,2],[15,-10]],'#cfe3ff',1);},
+ chromosome(g){if(typeof dgChromosome==='function')dgChromosome(g,0,0,1.25,'#8fd0ff',0);},
+ viralDNA(g){for(let x=-14;x<=14;x+=1){const y1=Math.sin(x/4)*6,y2=-y1;if(x%4===0)mLine(g,[[x,y1],[x,y2]],'#ffd36b',1.2);}g.beginPath();for(let x=-14;x<=14;x++)g.lineTo(x,Math.sin(x/4)*6);g.strokeStyle='#ff5c8a';g.lineWidth=2.2;g.stroke();g.beginPath();for(let x=-14;x<=14;x++)g.lineTo(x,-Math.sin(x/4)*6);g.strokeStyle='#c86bff';g.stroke();},
+ dnaHelix(g){for(let x=-14;x<=14;x+=1){const y1=Math.sin(x/4)*6;if(x%4===0)mLine(g,[[x,y1],[x,-y1]],BASE_ICON['ATGC'[((x+16)/4|0)%4]],1.4);}g.beginPath();for(let x=-14;x<=14;x++)g.lineTo(x,Math.sin(x/4)*6);g.strokeStyle='#4aa3ff';g.lineWidth=2.2;g.stroke();g.beginPath();for(let x=-14;x<=14;x++)g.lineTo(x,-Math.sin(x/4)*6);g.stroke();},
+ membraneProtein(g){for(let x=-14;x<=14;x+=5){mBall(g,x,-8,2.4,'#f7a8c8','#9c4f73',.6);mBall(g,x,8,2.4,'#f7a8c8','#9c4f73',.6);}g.fillStyle='#f3d77a';g.fillRect(-15,-5,30,10);g.beginPath();g.ellipse(0,0,7,12,0,0,Math.PI*2);g.fillStyle='#4f8fe0';g.fill();g.strokeStyle='#bcd8ff';g.lineWidth=1.2;g.stroke();},
+ guideRNA(g){mLine(g,[[-14,8],[2,8],[8,2],[8,-8],[2,-12],[-4,-8],[-4,-2]],'#c9b0ff',2.4);'AUGCC'.split('').forEach((b,i)=>{g.fillStyle=BASE_ICON[b];g.fillRect(-14+i*3.4,10,3,4);});},
+ cas9(g){mBall(g,-5,0,10,'#2bb5a4','#bffff3',1.4);mBall(g,7,1,8,'#1f8f84','#bffff3',1.4);mLine(g,[[-9,-3],[1,-3],[4,1]],'#c9b0ff',2);mLine(g,[[-15,7],[15,7]],'#4aa3ff',1.6);mLine(g,[[-15,10],[15,10]],'#4aa3ff',1.6);}
+};
+</script><script>/* ---------- Zone styles: every Ranger gets one platforming, one combat and one puzzle zone ---------- */
+const ZONE_STYLES = {
+ atp:['platform','puzzle','combat'], ribosome:['combat','puzzle','platform'], rougher:['combat','puzzle','platform'],
+ golgi:['platform','puzzle','combat'], cytoplasm:['combat','puzzle','platform'], membrane:['combat','platform','puzzle'],
+ mito:['combat','platform','puzzle'], nucleus:['platform','combat','puzzle'], smoother:['platform','combat','puzzle'],
+ lysosome:['combat','puzzle','platform'], dna:['puzzle','combat','platform'], rna:['puzzle','platform','combat'],
+ mitosis:['platform','puzzle','combat'], crispr:['puzzle','platform','combat']
+};
+const STYLE_LABEL={platform:'PLATFORM ZONE',combat:'COMBAT ZONE',puzzle:'PUZZLE ZONE'};
+function seeded(seed){let s=(seed*2654435761)>>>0;return ()=>((s=(s*1664525+1013904223)>>>0)/4294967296);}
+
+function newZone(style){return {style,gaps:[],platforms:[],movers:[],hazards:[],walls:[],cells:[],spawns:[],arenas:[],rooms:[],items:[],lock:null};}
+
+/* Platform zone: stairs, ferries over pits, hazard pools, lifts and pit runs, in a shuffled order. */
+function buildPlatform(index,route){
+ const R=seeded(route*31+index*7+3),w=newZone('platform');
+ const kinds=['stairs','ferry','hazard','lift','pits'];
+ for(let i=kinds.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[kinds[i],kinds[j]]=[kinds[j],kinds[i]];}
+ // capsules sit on the hardest-to-reach spots of the stairs, hazard pool and lift sections
+ let x=240;
+ for(const kind of kinds){
+  w.spawns.push([x+20,Math.floor(R()*3)]);x+=150+Math.round(R()*40);
+  if(kind==='stairs'){const d=Math.round(R()*8);w.platforms.push([x,90,252-d],[x+112,90,212-d],[x+226,100,170-d]);w.cells.push(cell(x+276,170-d-28));x+=380;}
+  if(kind==='ferry'){const gw=210+Math.round(R()*40);w.gaps.push([x,x+gw]);w.movers.push({kind:'ferry',x0:x+12,x1:x+gw-92,w:80,y:268,speed:58+Math.round(R()*12),t:R()*6});x+=gw;}
+  if(kind==='hazard'){const hw=290;w.hazards.push([x,x+hw]);w.platforms.push([x+12,70,250],[x+110,70,234],[x+208,70,250]);w.cells.push(cell(x+145,234-28));x+=hw+20;}
+  if(kind==='lift'){w.movers.push({kind:'lift',x:x,w:70,y0:292,y1:150,speed:52,t:0});w.platforms.push([x+92,170,150]);w.cells.push(cell(x+205,150-28));x+=300;}
+  if(kind==='pits'){const a=92+Math.round(R()*8),b=100+Math.round(R()*8);w.gaps.push([x,x+a],[x+a+70,x+a+70+b]);x+=a+70+b;}
+ }
+ w.length=x+420;return w;
+}
+const cell=(x,y,hidden=false)=>({x:Math.round(x),y:Math.round(y),taken:false,hidden});
+
+/* Combat zone: three lockdown arenas, each with escalating waves. Clearing one drops a molecule. */
+function buildCombat(index,route){
+ const R=seeded(route*17+index*11+5),w=newZone('combat');
+ const sizes=[[2,3],[3,3],[3,4]];
+ [260,980,1700].forEach((a,i)=>{
+  const b=a+560,lift=Math.round(R()*16);
+  w.platforms.push([a+100+Math.round(R()*30),100,240-lift],[a+330+Math.round(R()*30),100,240-(16-lift)]);
+  w.arenas.push({a,b,waves:sizes[i].map(n=>Array.from({length:n},()=>Math.floor(R()*3))),wave:-1,state:'idle',delay:0,elite:i===2});
+  w.cells.push(cell((a+b)/2,FLOOR-40,true));
+ });
+ w.length=1700+560+420;return w;
+}
+
+/* Puzzle zone: three rooms, each sealed by a biology lock. */
+function buildPuzzle(index,route,id){
+ const w=newZone('puzzle'),kind=PUZZLE_KIND[id];
+ [300,950,1600].forEach((a,r)=>{
+  const room={a,b:a+520,r,kind,solved:false,mistakes:0,count:0,flash:0,pos:0,meter:0};
+  w.walls.push(room.wall={x:room.b,open:false,top:-999});
+  w.spawns.push([a-110,r%3]);
+  w.cells.push(cell(room.b-40,FLOOR-40,true));
+  setupRoom(w,room,id);w.rooms.push(room);
+ });
+ w.length=1600+520+420;return w;
+}
+
+function buildZone(index,route){
+ const style=ZONE_STYLES[ranger.id][index];
+ const w=style==='platform'?buildPlatform(index,route):style==='combat'?buildCombat(index,route):buildPuzzle(index,route,ranger.id);
+ return w;
+}
+
+/* ---------- Puzzle content ---------- */
+const PUZZLE_KIND={ribosome:'sequence',dna:'sequence',rna:'sequence',mitosis:'sequence',crispr:'sequence',
+ atp:'carry',rougher:'carry',golgi:'carry',cytoplasm:'carry',membrane:'carry',nucleus:'carry',
+ mito:'meter',lysosome:'meter',smoother:'meter'};
+const PAIR={A:'T',T:'A',G:'C',C:'G'},RNA_PAIR={A:'U',T:'A',G:'C',C:'G'},CODON_TRNA={AUG:'UAC',GGC:'CCG',UUU:'AAA',UAA:'STOP'},CODON_AA={AUG:'Met',GGC:'Gly',UUU:'Phe'};
+const PHASES=['prophase','metaphase','anaphase','telophase'];
+function sequenceConfig(id,r){
+ if(id==='dna'){const t=['TAC','GATC','CGTAA'][r];return {title:'BASE-PAIR BRIDGE',prompt:'Template  '+t.split('').join(' '),answer:t.split('').map(b=>PAIR[b]),options:['A','T','G','C'],line:'Build the matching strand',hint:'A pairs with T, and G pairs with C.'};}
+ if(id==='rna'){const t=['TAC','GCAT','TACGT'][r];return {title:'TRANSCRIPTION GATE',prompt:'DNA template  '+t.split('').join(' '),answer:t.split('').map(b=>RNA_PAIR[b]),options:['A','U','G','C','T'],line:'Build the mRNA copy',hint:'RNA pairs U with A and has no T. G pairs with C.'};}
+ if(id==='ribosome'){const c=[['AUG','GGC'],['AUG','UUU','GGC'],['AUG','GGC','UUU','UAA']][r];return {title:'TRANSLATION BAY',prompt:'mRNA  '+c.join(' '),answer:c.map(x=>CODON_TRNA[x]),options:['UAC','CCG','AAA','AUG','STOP'],line:'Send the tRNA that pairs with each codon',hint:'An anticodon pairs with the codon: A with U, G with C. A stop codon gets the release factor.',codons:c};}
+ if(id==='mitosis'){const a=[['metaphase'],['prophase','metaphase','anaphase'],PHASES.slice()][r];return {title:'SPINDLE CONTROL',prompt:r===0?'Find metaphase':'Put the stages in order',answer:a,options:PHASES.slice(),line:r===0?'Hit the cell in metaphase':'Hit the stages in the order they happen',hint:'Prophase → metaphase → anaphase → telophase. Metaphase lines chromosomes up in the middle.',pictures:true};}
+ if(id==='crispr'){const guides=[['AUGCC'],['GCAUU','CCGAU'],['UAGCG','AACGU']][r];
+  const target=g=>g.split('').map(b=>({A:'T',U:'A',G:'C',C:'G'})[b]).join('');
+  return {title:'TARGET CHECKPOINT',prompt:'Guide RNA  '+guides.join('  then  '),answer:guides.map(target),options:null,guides,line:'Cut the DNA that pairs with the guide',hint:'Guide RNA pairs with DNA: A–T, U–A, G–C, C–G.'};}
+}
+function crisprOptions(cfg,step){
+ const right=cfg.answer[step],g=cfg.guides[step];
+ const wrong1=g.replace(/U/g,'T'),wrong2=right.split('').reverse().join('');
+ const set=[right,wrong1,wrong2===right?right.slice(1)+right[0]:wrong2];
+ return set;
+}
+const CARRY={
+ atp:r=>({title:'PUMP POWER',line:'Charge ADP into ATP, then spend it at the pump',goal:r+1,
+  items:[['adp',90]],machines:[{id:'charger',label:'PHOSPHATE CHARGER',icon:'phosphate',x:230,accept:{adp:{give:'atp',say:'ADP + phosphate → ATP'}},reject:'The charger adds a phosphate to ADP.'},
+   {id:'pump',label:'ION PUMP',icon:'ions',x:420,accept:{atp:{count:true,drop:'adp',say:'ATP → ADP + phosphate: the pump runs!'}},reject:'The pump only runs on charged ATP.'}],
+  hint:'ATP powers the pump and becomes ADP. Recharge the ADP and use it again.'}),
+ rougher:r=>({title:'FOLDING CHAMBERS',line:'Feed the new protein into the ER, then ship its vesicle',goal:r+1,
+  dispensers:[{x:70,item:'polypeptide',label:'RIBOSOME'}],machines:[{id:'er',label:'ER CHANNEL',icon:'polypeptide',x:230,accept:{polypeptide:{give:'vesicleOrange',say:'Folded and packed into a vesicle'}},reject:'The ER channel takes new protein chains.'},
+   {id:'nuc',label:'NUCLEUS',icon:'nucleotide',x:330,accept:{},reject:'Secreted proteins are not sent into the nucleus.'},
+   {id:'golgi',label:'TO GOLGI',icon:'vesicleGold',x:430,accept:{vesicleOrange:{count:true,say:'Vesicle sent to the Golgi'}},reject:'Fold the protein in the ER first.'}],
+  hint:'Ribosome → rough ER → vesicle → Golgi.'}),
+ golgi:r=>{const all=[['digest','Digestive enzymes'],['membraneProtein','Membrane protein'],['vesicleGold','Hormone to secrete']];const items=all.slice(0,r+1);
+  return {title:'SORTING CISTERNAE',line:'Send each cargo to the right address',goal:items.length,items:items.map(([k],i)=>[k,60+i*42]),labels:Object.fromEntries(all),
+  machines:[{id:'lyso',label:'TO LYSOSOME',icon:'digest',x:250,accept:{digest:{count:true,consume:true,say:'Enzymes delivered to the lysosome'}},reject:'Lysosomes take digestive enzymes.'},
+   {id:'mem',label:'TO MEMBRANE',icon:'membraneProtein',x:350,accept:{membraneProtein:{count:true,consume:true,say:'Protein built into the membrane'}},reject:'The membrane takes membrane proteins.'},
+   {id:'out',label:'OUT OF CELL',icon:'vesicleGold',x:450,accept:{vesicleGold:{count:true,consume:true,say:'Hormone secreted'}},reject:'Only secreted cargo leaves the cell.'}],
+  hint:'Digestive enzymes → lysosome. Membrane proteins → membrane. Hormones → out of the cell.'};},
+ cytoplasm:r=>({title:'REACTION DISTRICT',line:'Split glucose, then fuel the mitochondrion',goal:r+1,
+  dispensers:[{x:70,item:'glucose',label:'GLUCOSE INLET'}],machines:[{id:'gly',label:'GLYCOLYSIS',icon:'enzyme',x:230,accept:{glucose:{give:'pyruvate',say:'Glucose → 2 pyruvate'}},reject:'Glycolysis enzymes split glucose.'},
+   {id:'mito',label:'MITOCHONDRION',icon:'pyruvate',x:430,accept:{pyruvate:{count:true,say:'Pyruvate delivered'}},reject:'Mitochondria take pyruvate, not glucose. Split it in the cytosol first.'}],
+  hint:'Glucose is split into pyruvate in the cytosol. Then pyruvate goes to the mitochondrion.'}),
+ membrane:r=>{const all=[['o2','Oxygen (O₂)'],['glucose','Glucose'],['ions','Na⁺ ions']];const items=all.slice(0,r+1);
+  return {title:'PUMP CONTROL',line:'Move each molecule across the right way',goal:items.length,items:items.map(([k],i)=>[k,60+i*42]),labels:Object.fromEntries(all),
+  machines:[{id:'bilayer',label:'THROUGH BILAYER',icon:'phospholipid',x:250,accept:{o2:{count:true,consume:true,say:'Small O₂ slips straight through the bilayer'}},reject:'Only small, uncharged molecules pass straight through.'},
+   {id:'channel',label:'CARRIER PROTEIN',icon:'glucose',x:350,accept:{glucose:{count:true,consume:true,say:'Glucose crosses through a carrier protein'}},reject:'Carrier proteins move glucose down its gradient.'},
+   {id:'pump',label:'ATP PUMP',icon:'atp',x:450,accept:{ions:{count:true,consume:true,say:'The pump spends ATP to move Na⁺ uphill'}},reject:'Pumps move ions against their gradient.'}],
+  hint:'O₂ crosses the bilayer, glucose needs a carrier, and Na⁺ is pumped using ATP.'};},
+ nucleus:r=>{const all=[['mrna','mRNA'],['dnaHelix','Chromosomal DNA'],['histone','Histones']];const items=all.slice(0,r+1);
+  return {title:'PORE CHECKPOINT',line:'Only the right cargo leaves through the pore',goal:items.length,items:items.map(([k],i)=>[k,60+i*42]),labels:Object.fromEntries(all),
+  machines:[{id:'pore',label:'NUCLEAR PORE',icon:'mrna',x:300,accept:{mrna:{count:true,consume:true,say:'mRNA exported to the ribosomes'}},reject:'DNA and histones stay inside the nucleus.'},
+   {id:'chromatin',label:'CHROMATIN STORE',icon:'histone',x:440,accept:{dnaHelix:{count:true,consume:true,say:'DNA stays safe in the nucleus'},histone:{count:true,consume:true,say:'Histones pack the DNA'}},reject:'mRNA must leave the nucleus to be read.'}],
+  hint:'mRNA leaves through nuclear pores. DNA and its histones stay inside.'};}
+};
+const METER={
+ mito:r=>({variant:'gate',title:'ATP TURBINE',line:'Pump H⁺ with the transport chain. A full gradient spins ATP synthase open.',label:'H⁺ GRADIENT',gain:24,leak:7,cool:.8,threshold:[55,65,75][r],pumps:r<2?[70,150]:[70,150,230],high:r===2?[230]:[],
+  pumpLabel:'ETC PUMP',hint:'Hit the transport-chain pumps quickly. While H⁺ is high, ATP synthase spins and the door opens.'}),
+ lysosome:r=>({variant:'dissolve',title:'ACID CHAMBER',line:'Run the proton pumps until the pH drops to 5. Acid lets the enzymes digest the blockage.',label:'pH',gain:20,leak:[4,5,6][r],cool:1.1,threshold:100,pumps:r===0?[70,170]:[70,170,270],high:r===2?[170]:[],
+  pumpLabel:'H⁺ PUMP',hint:'Use every pump in turn. Lysosome enzymes only work in acid (about pH 5).'}),
+ smoother:r=>({variant:'lift',title:'CALCIUM LIFT',line:'Release Ca²⁺ from the smooth ER. The muscle fiber contracts and hauls the lift up.',label:'Ca²⁺ LEVEL',gain:28,leak:[9,11,13][r],cool:.6,threshold:0,ledge:[160,140,120][r],pumps:[60],high:[],
+  pumpLabel:'RELEASE Ca²⁺',hint:'Stand on the lift and hit the release switch fast. When calcium is pumped back, the muscle relaxes.'})
+};
+function setupRoom(w,room,id){
+ const a=room.a;
+ if(room.kind==='sequence'){
+  room.cfg=sequenceConfig(id,room.r);
+  room.switches=[];
+  const opts=room.cfg.options||crisprOptions(room.cfg,0);
+  const order=opts.map((_,i)=>i);const R=seeded(a+room.r*13+id.length);for(let i=order.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[order[i],order[j]]=[order[j],order[i]];}
+  const pic=room.cfg.pictures,span=pic?92:room.cfg.options?72:110;
+  order.forEach((k,n)=>room.switches.push({x:a+70+n*span,value:opts[k],flash:0,good:0,w:pic?60:room.cfg.options?40:84}));
+ }
+ if(room.kind==='carry'){
+  room.cfg=CARRY[id](room.r);
+  for(const [key,dx] of room.cfg.items||[])w.items.push({key,x:a+dx,y:FLOOR-14,room:room.r});
+  room.machines=room.cfg.machines.map(m=>({...m,x:a+m.x,flash:0}));
+  room.dispensers=(room.cfg.dispensers||[]).map(d=>({...d,x:a+d.x}));
+ }
+ if(room.kind==='meter'){
+  room.cfg=METER[id](room.r);
+  room.switches=room.cfg.pumps.map(dx=>({x:a+dx,cool:0,flash:0,high:room.cfg.high.includes(dx)}));
+  for(const s of room.switches)if(s.high)w.platforms.push([s.x-45,90,236]);
+  if(room.cfg.variant==='lift'){
+   room.lift={kind:'muscle',x:room.b-190,w:70,y:FLOOR-6,base:FLOOR-6,top:room.cfg.ledge+4};
+   w.movers.push(room.lift);
+   room.wall.top=room.cfg.ledge+6; // the wall is a tall cliff: only the ledge on top gets past it
+   w.platforms.push([room.b-100,130,room.cfg.ledge]);
+   room.switches=[{lift:true,x:room.lift.x+35,cool:0,flash:0}]; // the release lever rides on the lift
+  }
+ }
+}
+
+/* ---------- Runtime ---------- */
+function moverSurface(m){return m.kind==='ferry'||m.kind==='lift'||m.kind==='muscle';}
+function updateLevel(dt){
+ const w=world,p=player;
+ for(const m of w.movers){
+  const ox=m.x??0,oy=m.y;m.prevY=m.y;
+  if(m.kind==='ferry'){m.t+=dt;const span=m.x1-m.x0,period=span/m.speed*2,ph=(m.t%period)/period;m.x=m.x0+(ph<.5?ph*2:2-ph*2)*span;}
+  if(m.kind==='lift'){m.t+=dt;const span=m.y0-m.y1,period=span/m.speed*2+1.6,ph=m.t%period,move=span/m.speed;m.y=ph<.8?m.y0:ph<.8+move?m.y0-(ph-.8)*m.speed:ph<1.6+move?m.y1:m.y1+(ph-1.6-move)*m.speed;m.y=clamp(m.y,m.y1,m.y0);}
+  if(m.kind==='muscle'){const room=w.rooms.find(r=>r.lift===m);const target=m.base-(m.base-m.top)*clamp(room.meter/100,0,1);m.y+=clamp(target-m.y,-140*dt,140*dt);}
+  m.dx=(m.x??0)-ox;m.dy=m.y-oy;
+ }
+ // hazard pools hurt on contact
+ if(p.ground&&p.y>=FLOOR-.5&&p.inv<=0&&p.dodge<=0&&w.hazards.some(([a,b])=>p.x>a+4&&p.x<b-4)){damagePlayer(1,p.x+p.face*20);if(mode==='play'){p.vy=-260;p.ground=false;burst(p.x,FLOOR-4,'#e08cff',8);}}
+ if(w.style==='combat')updateArenas(dt);
+ if(w.style==='puzzle')for(const room of w.rooms)updateRoom(room,dt);
+}
+function surfacesAt(x){
+ const list=world.platforms.filter(([a,wd])=>x>=a-6&&x<=a+wd+6).map(q=>({y:q[2],prev:q[2]}));
+ for(const m of world.movers)if(moverSurface(m)&&x>=m.x-6&&x<=m.x+m.w+6)list.push({y:m.y,prev:m.prevY??m.y,mover:m});
+ if(!world.gaps.some(([a,b])=>x>a&&x<b))list.push({y:FLOOR,prev:FLOOR});
+ return list.sort((a,b)=>a.y-b.y);
+}
+function blockByWalls(oldX,x,y){
+ for(const wl of world.walls){if(wl.open||y<wl.top)continue;
+  if(oldX<=wl.x-14&&x>wl.x-14)x=wl.x-14;else if(oldX>=wl.x+14&&x<wl.x+14)x=wl.x+14;}
+ if(world.lock){x=clamp(x,world.lock.a+16,world.lock.b-16);}
+ return x;
+}
+function revealCell(i){const c=world.cells[i];if(c&&c.hidden){c.hidden=false;burst(c.x,c.y,'#9fffea',22);tone(880,.12,'triangle');}}
+/* Combat arenas */
+function updateArenas(dt){
+ const p=player;
+ for(const [i,ar] of world.arenas.entries()){
+  if(ar.state==='idle'&&p.x>ar.a+90&&p.x<ar.b-60){ar.state='fight';world.lock=ar;ar.delay=.6;toast('LOCKDOWN — clear the wave');tone(220,.25,'sawtooth',.03);}
+  if(ar.state!=='fight')continue;
+  const alive=enemies.some(e=>e.arena===ar&&e.hp>0);
+  if(!alive){ar.delay-=dt;if(ar.delay<=0){ar.wave++;
+   if(ar.wave>=ar.waves.length){ar.state='done';world.lock=null;revealCell(i);toast('Arena clear — grab the '+CARGO[ranger.id][zone].toLowerCase());tone(660,.2,'triangle');}
+   else{ar.waves[ar.wave].forEach((type,n)=>{const e=makeEnemy(n%2?ar.b-50-n*18:ar.a+50+n*18,type);e.arena=ar;e.drop=-220-n*60;e.face=n%2?-1:1;if(ar.elite&&n===0){e.hp=e.max=e.max+6;e.elite=true;}enemies.push(e);});ar.delay=.9;if(ar.wave>0)toast('Wave '+(ar.wave+1)+' of '+ar.waves.length);}
+  }}
+ }
+}
+/* Puzzle rooms */
+function updateRoom(room,dt){
+ room.flash=Math.max(0,room.flash-dt);
+ for(const s of room.switches||[]){s.recent=Math.max(0,(s.recent||0)-dt);s.flash=Math.max(0,s.flash-dt);s.good=Math.max(0,(s.good||0)-dt);if(s.cool!==undefined)s.cool=Math.max(0,s.cool-dt);}
+ for(const m of room.machines||[])m.flash=Math.max(0,m.flash-dt);
+ if(!room.entered&&player.x>room.a-20&&player.x<room.b){room.entered=true;toast(room.cfg.line);}
+ if(room.kind==='meter'&&!room.solved){
+  const c=room.cfg;room.meter=Math.max(0,room.meter-c.leak*dt);
+  if(c.variant==='gate'){room.wall.open=room.meter>=c.threshold;if(player.x>room.b+16)solveRoom(room);}
+  if(c.variant==='dissolve'&&room.meter>=100)solveRoom(room);
+  if(c.variant==='lift'&&player.x>room.b+16)solveRoom(room);
+ }
+}
+function solveRoom(room){
+ if(room.solved)return;room.solved=true;room.wall.open=true;run.score+=Math.max(100,400-room.mistakes*60);
+ revealCell(room.r);tone(523,.12,'triangle');setTimeout(()=>tone(784,.18,'triangle'),110);
+ toast(room.cfg.title+' unlocked');burst(room.wall.x,FLOOR-60,ranger.color,26);shake=3;
+}
+function roomAt(x){return world.rooms?.find(r=>x>r.a-40&&x<r.b+10&&!r.solved);}
+/* Melee and dive kicks also strike puzzle switches. Returns true if a switch was hit. */
+function strikeSwitches(x,face,reach){
+ const room=roomAt(player.x);if(!room||!room.switches)return false;
+ const p=player;let best=null;
+ for(const s of room.switches){
+  const dx=s.x-p.x,sy=switchBase(room,s);
+  if(dx*face<-14||Math.abs(dx)>reach||Math.abs(p.y-sy)>40||s.recent>0)continue;
+  if(!best||Math.abs(dx)<Math.abs(best.x-p.x))best=s;
+ }
+ if(best){best.recent=.45;pressSwitch(room,best);return true;}
+ return false;
+}
+function switchBase(room,s){return s.lift?room.lift.y:s.high?236:FLOOR;}
+function pressSwitch(room,s){
+ if(room.kind==='meter'){
+  if(s.cool>0){toast(room.cfg.pumpLabel+' recharging — use another one');return;}
+  s.cool=room.cfg.cool;s.flash=.25;room.meter=Math.min(100,room.meter+room.cfg.gain);tone(300+room.meter*4,.08,'square',.02);burst(s.x,switchBase(room,s)-30,'#9fe8ff',8);return;
+ }
+ const cfg=room.cfg,want=cfg.answer[room.pos];
+ if(s.value===want){
+  s.good=.5;room.pos++;tone(520+room.pos*70,.1,'triangle');burst(s.x,FLOOR-34,'#9effc4',10);
+  if(room.pos>=cfg.answer.length)solveRoom(room);
+  else if(!cfg.options){const opts=crisprOptions(cfg,room.pos);const order=[2,0,1];room.switches.forEach((sw,n)=>{sw.value=opts[order[(n+room.pos)%3]];});}
+ }else{
+  s.flash=.5;room.mistakes++;room.flash=.4;tone(110,.18,'sawtooth',.03);toast('Not quite — '+cfg.hint);
+ }
+}
+/* Carrying: E picks up, delivers or drops. */
+function carryInteract(){
+ const p=player,room=roomAt(p.x);
+ if(p.carry){
+  const m=room?.machines?.find(m=>Math.abs(m.x-p.x)<42);
+  if(m){
+   const rule=m.accept[p.carry.key];
+   if(!rule){m.flash=.5;room.mistakes++;tone(110,.18,'sawtooth',.03);toast('Rejected — '+m.reject);return true;}
+   m.flash=.4;tone(620,.1,'triangle');burst(m.x,FLOOR-50,'#9effc4',12);toast(rule.say);
+   if(rule.give)p.carry={key:rule.give};else p.carry=null;
+   if(rule.drop)world.items.push({key:rule.drop,x:m.x+30,y:FLOOR-14,room:room.r,bounce:.4});
+   if(rule.count){room.count++;if(room.count>=room.cfg.goal)solveRoom(room);}
+   return true;
+  }
+  world.items.push({key:p.carry.key,x:p.x+p.face*16,y:FLOOR-14,room:room?room.r:-1});p.carry=null;tone(240,.06,'triangle');return true;
+ }
+ const item=world.items.find(it=>Math.abs(it.x-p.x)<30);
+ if(item){world.items.splice(world.items.indexOf(item),1);p.carry={key:item.key};tone(500,.07,'triangle');toast('Carrying '+itemName(item.key,room)+' — press E at a machine');return true;}
+ const d=room?.dispensers?.find(d=>Math.abs(d.x-p.x)<40);
+ if(d){p.carry={key:d.item};tone(500,.07,'triangle');toast('Carrying '+itemName(d.item,room));return true;}
+ return false;
+}
+const ITEM_NAMES={adp:'ADP',atp:'ATP',polypeptide:'a new protein chain',vesicleOrange:'a protein vesicle',glucose:'glucose',pyruvate:'pyruvate'};
+function itemName(key,room){return room?.cfg?.labels?.[key]||ITEM_NAMES[key]||key;}
+function puzzleObjective(){
+ const room=world.rooms.find(r=>!r.solved);if(!room)return null;
+ if(room.kind==='sequence')return room.cfg.title+' · '+room.pos+'/'+room.cfg.answer.length;
+ if(room.kind==='carry')return room.cfg.title+' · '+room.count+'/'+room.cfg.goal;
+ return room.cfg.title+' · '+room.cfg.label;
+}
+
+/* ---------- Drawing ---------- */
+function drawLevelBack(){
+ const w=world;
+ for(const [a,b] of w.hazards){if(b<camera||a>camera+W)continue;const x=a-camera;rect('#2b0f33',x,FLOOR-4,b-a,8);rect('#a43cd6',x,FLOOR-6,b-a,3);
+  for(let i=0;i<(b-a)/14;i++){const bx=x+7+i*14,by=FLOOR-8-Math.abs(Math.sin(clock*3+i))*5;rect('#e08cff',bx,by,3,3);}
+  if(Math.floor(clock*2)%2===0)text('⚠',x+(b-a)/2,FLOOR-14,10,'#ffb3f0','center');}
+ for(const m of w.movers){if(m.x+m.w<camera||m.x>camera+W)continue;
+  if(m.kind==='muscle'){const room=w.rooms.find(r=>r.lift===m),x=m.x-camera,topY=40;
+   // a striated muscle fiber hangs from the ceiling and shortens as calcium rises
+   const fiberBottom=topY+30+Math.max(0,(m.y-m.top))*.45;rect('#5a1830',x+m.w/2-9,topY,18,fiberBottom-topY);for(let yy=topY;yy<fiberBottom;yy+=5)rect('#ff8fa8',x+m.w/2-9,yy,18,2);
+   ctx.strokeStyle='#d8e6ef';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x+m.w/2,fiberBottom);ctx.lineTo(x+m.w/2,m.y);ctx.stroke();
+   text('MUSCLE FIBER',x+m.w/2,topY-6,8,'#ffc0d0','center');}
+  drawMoverPlatform(m);}
+ if(w.style==='puzzle')for(const room of w.rooms)drawRoom(room);
+ for(const ar of w.arenas)if(ar.state==='fight')for(const x of [ar.a,ar.b]){const sx=x-camera;for(let y=60;y<FLOOR;y+=6){rect(Math.floor(clock*12+y/6)%2?'#ff5d8f':'#ffb3cc',sx-2,y,4,3);}rect('#ff5d8f33',sx-8,60,16,FLOOR-60);}
+ for(const it of w.items){const x=it.x-camera;if(x<-30||x>W+30)continue;const icon=moleculeIcon(it.key);ctx.save();ctx.imageSmoothingEnabled=true;ctx.drawImage(icon,Math.round(x-17),Math.round(it.y-17+Math.sin(clock*4+it.x)*2));ctx.restore();
+  if(Math.abs(it.x-player.x)<30&&!player.carry)text('E · pick up',x,it.y-22,8,'#fff0b2','center');}
+}
+function drawMoverPlatform(m){const x=m.x-camera,y=m.y;rect('#0a182b',x,y,m.w,14);rect(m.kind==='muscle'?'#ff8fa8':'#ffd36b',x,y,m.w,3);rect('#324b66',x,y+4,m.w,8);
+ for(let j=6;j<m.w-6;j+=12)rect('#5b7a91',x+j,y+6,6,2);if(m.kind!=='ferry'){rect('#d8e6ef',x+m.w/2-1,0,0,0);}}
+function drawSign(x,y,w,title,lines,color='#7cf7df'){
+ x-=camera;if(x+w/2<0||x-w/2>W)return;rect('#06101ecc',x-w/2,y,w,14+lines.length*12);rect(color,x-w/2,y,w,2);text(title,x,y+11,8,color,'center');
+ lines.forEach((l,i)=>text(l,x,y+24+i*12,9,'#e8f6ff','center'));rect('#2f4a63',x-2,y+14+lines.length*12,4,FLOOR-(y+14+lines.length*12));}
+function drawRoom(room){
+ const cfg=room.cfg,a=room.a;
+ // the room's gate
+ const gx=room.wall.x-camera;
+ if(room.kind==='meter'&&cfg.variant==='lift'){rect('#10263f',gx-14,cfg.ledge+12,28,FLOOR-cfg.ledge-12);for(let y=cfg.ledge+16;y<FLOOR;y+=12)rect('#22405c',gx-12,y,24,5);}
+ else if(!room.wall.open){rect('#0d1b2e',gx-10,70,20,FLOOR-70);for(let y=74;y<FLOOR;y+=10)rect(room.flash>0?'#ff6b8a':ranger.color,gx-8,y,16,4);text('LOCKED',gx,64,8,'#ffd887','center');}
+ else if(!room.solved){rect('#9effc455',gx-10,70,20,FLOOR-70);}
+ if(room.kind==='sequence'){
+  const built=cfg.answer.slice(0,room.pos);
+  let lines=[cfg.prompt];
+  if(cfg.codons)lines.push('Chain  '+(cfg.codons.slice(0,room.pos).map(c=>CODON_AA[c]||'release').join('–')||'…'));
+  else if(cfg.pictures)lines.push(room.pos?'Done  '+room.pos+'/'+cfg.answer.length:'Order  ? → ?');
+  else lines.push('Built  '+(built.join(' ')||'')+' '+'_ '.repeat(cfg.answer.length-room.pos));
+  drawSign(a+260,96,300,cfg.title,lines.concat([cfg.line]),room.solved?'#9effc4':'#7cf7df');
+  for(const s of room.switches)drawSwitch(s,room);
+ }
+ if(room.kind==='carry'){
+  drawSign(a+260,70,300,cfg.title,[cfg.line,'Delivered '+room.count+'/'+cfg.goal],room.solved?'#9effc4':'#7cf7df');
+  for(const d of room.dispensers)drawMachine(d.x,d.label,d.item,0,'#2bb5a4');
+  for(const m of room.machines)drawMachine(m.x,m.label,m.icon,m.flash,m.flash>0&&!player.carry?'#9effc4':'#7cf7df');
+ }
+ if(room.kind==='meter'){
+  const v=cfg.variant,pct=room.meter/100;
+  const label=v==='dissolve'?'pH '+(7.2-2.2*pct).toFixed(1):cfg.label+' '+Math.round(room.meter)+'%';
+  drawSign(a+300,62,320,cfg.title,[cfg.line.length>52?cfg.line.slice(0,cfg.line.indexOf('.')+1):cfg.line,label],room.solved?'#9effc4':'#7cf7df');
+  const mx=a+300-camera-100;rect('#0b1424',mx,104+12,200,8);rect(v==='dissolve'?'#ff7a9a':'#ffd36b',mx+1,104+13,198*pct,6);
+  if(v==='gate'){const t=cfg.threshold/100*200;rect('#ffffff',mx+t,112,2,16);}
+  if(v==='gate'&&!room.solved){const gx2=room.wall.x-camera;ctx.save();ctx.translate(gx2,FLOOR-130);ctx.rotate(clock*(room.wall.open?8:.4));for(let k=0;k<6;k++){ctx.rotate(Math.PI/3);rect('#ffbd6d',-2,-22,4,22);}ctx.restore();text('ATP SYNTHASE',gx2,FLOOR-160,8,'#ffd9a8','center');}
+  if(v==='dissolve'&&!room.solved){const gx2=room.wall.x-camera;ctx.save();ctx.globalAlpha=.9;ctx.drawImage(moleculeIcon('repair'),gx2-17,FLOOR-150);ctx.restore();text('BLOCKAGE',gx2,FLOOR-158,8,'#ffc0d0','center');}
+  for(const s of room.switches)drawSwitch(s,room);
+ }
+}
+function drawSwitch(s,room){
+ const x=s.x-camera,base=switchBase(room,s),w=s.w||34,h=room.cfg.pictures?52:30;if(x<-60||x>W+60)return;
+ const glow=s.good>0?'#9effc4':s.flash>0?'#ff6b8a':s.cool>0?'#4b6275':'#ffd36b';
+ rect('#0b1a2c',x-w/2,base-h-6,w,h+6);rect(glow,x-w/2,base-h-6,w,3);rect('#1b3550',x-w/2+3,base-h-1,w-6,h-2);
+ if(s.lift){rect('#2f4a63',x-2,base-26,4,26);rect(s.cool>0?'#33485a':'#ff8fa8',x-7,base-36,14,12);text('Ca²⁺',x,base-27,7,'#1b0d14','center');text('Z · '+room.cfg.pumpLabel,x,base-42,8,'#fff0b2','center');return;}
+ if(room.kind==='meter'){text(room.cfg.pumpLabel,x,base-h-12,8,'#fff0b2','center');rect(s.cool>0?'#33485a':'#ff8fa8',x-7,base-h+6,14,14);text('Z',x,base-h+17,9,'#1b0d14','center');return;}
+ if(room.cfg.pictures){ctx.save();ctx.translate(x,base-h/2-2);ctx.scale(.36,.36);dgMitosisCell(ctx,0,0,s.value,52);ctx.restore();return;}
+ const v=s.value,col=v.length===1?(BASE_ICON[v]||'#ffd36b'):'#e8f6ff';
+ if(v.length===1){rect(col,x-12,base-h+3,24,20);text(v,x,base-h+18,13,'#0b1424','center');}
+ else if(v==='STOP'){text('RELEASE',x,base-h+11,8,'#ffb0bd','center');text('FACTOR',x,base-h+21,8,'#ffb0bd','center');}
+ else{const n=v.length,bw=Math.min(14,(w-6)/n);for(let i=0;i<n;i++){rect(BASE_ICON[v[i]]||'#ccc',x-n*bw/2+i*bw,base-h+3,bw-1,20);text(v[i],x-n*bw/2+i*bw+bw/2-.5,base-h+17,9,'#0b1424','center');}}
+ if(room.cfg.codons)text('tRNA',x,base-h-10,8,'#c9b0ff','center');
+}
+function drawMachine(x,label,icon,flash,color){
+ x-=camera;if(x<-50||x>W+50)return;rect('#10263f',x-22,FLOOR-48,44,48);rect(flash>0?'#ff6b8a':color,x-24,FLOOR-50,48,3);rect('#1d4c63',x-17,FLOOR-42,34,30);
+ const ic=moleculeIcon(icon);ctx.save();ctx.imageSmoothingEnabled=true;ctx.globalAlpha=.9;ctx.drawImage(ic,Math.round(x-17),FLOOR-44);ctx.restore();
+ text(label,x,FLOOR-56,8,'#d8ffed','center');
+ if(Math.abs(player.x-(x+camera))<42)text(player.carry?'E · deliver':'E · use',x,FLOOR-68,8,'#fff0b2','center');
 }
 </script><script>/* Station names and the one-line mission brief each Ranger gives. */
 const MISSION_STYLES = {
@@ -1215,11 +1661,24 @@ async function loadPortrait(id){
 }
 let environment;
 const environments={};
+function filtered(art,filter){const c=makeCanvas(art.width,art.height),g=c.getContext('2d');g.filter=filter;g.drawImage(art,0,0);return c;}
+/* Enemy families. Each one fights differently. Until its own sprite sheet is added (src/packed/<family>-sheet.png,
+   4 columns x 3 rows like bacteria-sheet.png), it borrows the bacteria art with a color shift as a stand-in. */
+const ENEMY_FAMILY={atp:'radical',ribosome:'misfolded',rougher:'misfolded',golgi:'misfolded',cytoplasm:'bacteria',membrane:'bacteria',mito:'radical',nucleus:'retrovirus',smoother:'radical',lysosome:'bacteria',dna:'retrovirus',rna:'retrovirus',mitosis:'mutant',crispr:'miniphage'};
+const FAMILY={
+ bacteria:{name:'Bacteria',height:48,speed:1,hp:0,tip:'Bacteria have broken in. Combo them down.'},
+ retrovirus:{name:'Retroviruses',height:46,speed:1,hp:0,placeholder:'hue-rotate(150deg) saturate(1.3)',tip:'Retroviruses latch on and drain your health. Attack or dodge (C) to shake them off.'},
+ mutant:{name:'Mutated cells',height:50,speed:1.05,hp:1,placeholder:'hue-rotate(230deg) saturate(1.4)',tip:'Mutated cells split in two when wounded. Finish them with big hits like kicks and dive kicks.'},
+ misfolded:{name:'Misfolded proteins',height:52,speed:.62,hp:3,placeholder:'hue-rotate(300deg) saturate(.8) brightness(.95)',tip:'Misfolded proteins are slow and tough, and they clump together if you leave them side by side.'},
+ radical:{name:'Free radicals',height:40,speed:1.6,hp:-2,placeholder:'hue-rotate(60deg) saturate(1.6) brightness(1.15)',tip:'Free radicals are fast and erratic, and some float. Dive kicks knock floaters down.'},
+ miniphage:{name:'Mini-phages',height:46,speed:1,hp:0,placeholder:'hue-rotate(110deg) saturate(.6) brightness(1.2)',tip:'Mini-phages leap at you. Dodge (C) as they come down.'}
+};
 async function load(){
  document.fonts?.load('16px "Press Start 2P"').catch(()=>{});
  let count=0;const total=RANGERS.length+2;
  for(const r of RANGERS){await Promise.all([loadAtlas(r.id,4,4,74),loadPortrait(r.id)]);$('loadProgress').textContent=++count+'/'+total;}
  await loadAtlas('bacteria',4,3,48);$('loadProgress').textContent=++count+'/'+total;
+ for(const [family,info] of Object.entries(FAMILY)){if(family==='bacteria')continue;if(ASSETS[family+'-sheet'])await loadAtlas(family,4,3,info.height);else atlases[family]=atlases.bacteria.map(c=>filtered(c,info.placeholder));}
  await loadAtlas('phage',4,2,104);for(const name of ['environment','archive','membranes'])environments[name]=await readImage(ASSETS[name]);
  environment=environments.environment;
  $('loading').hidden=true;$('student').value=profile.name;buildRoster();selectRanger(selected);save();showTitle();last=performance.now();requestAnimationFrame(tick);
@@ -1253,45 +1712,30 @@ function startMission(resume=false){
  $('missionSelect').hidden=true;$('screen').hidden=false;$('controls').hidden=false;$('mobile').hidden=false;$('pause').hidden=false;loadZone(cp?cp.zone:0);tone(520,.15,'triangle');
 }
 function makeWorld(index){
- const boss=index===3;
- const route=RANGERS.findIndex(r=>r.id===ranger.id);
- const length=boss?1100:2100+(route%5)*160;
- const gaps=boss?[]:[
-  [500+(route%4)*45,565+(route%4)*45],
-  [1150+(route%3)*50,1220+(route%3)*50],
-  [length-520,length-450]
- ];
- const platforms=boss?[[280,110,235],[700,110,235]]:[];
- const cells=[];
- if(!boss){
-  for(let i=0;i<3;i++){
-   const x=300+i*(length-700)/3+(index%2)*45;
-   const y=230+((route+i+index)%3)*13;
-   platforms.push([Math.round(x),130,y]);
-   cells.push({x:Math.round(x+65),y:y-28,taken:false});
-  }
-  for(const [left,right] of gaps){
-   platforms.push([left-100,90,252],[right+8,105,245]);
-  }
- }
- return {length,gaps,platforms,cells,
-  terminal:{x:boss?170:length-180,done:false},boss,cleared:false,
-  shieldUnlocked:false,shieldActive:false};
+ const boss=index===3,route=RANGERS.findIndex(r=>r.id===ranger.id);
+ const w=boss?{...newZone('boss'),length:1100,platforms:[[280,110,235],[700,110,235]]}:buildZone(index,route);
+ return Object.assign(w,{terminal:{x:boss?170:w.length-180,done:false},boss,cleared:false,shieldUnlocked:false,shieldActive:false});
 }
 function loadZone(index){
  zone=index;world=makeWorld(index);
- environment=environments[['nucleus','dna','rna','mitosis','crispr'].includes(ranger.id)?'archive':['atp','membrane','mito','golgi','smoother','lysosome'].includes(ranger.id)?'membranes':'environment'];player={x:90,y:FLOOR,vx:0,vy:0,face:1,hp:10,energy:6,ground:true,coyote:.1,jumpBuffer:0,action:null,inv:0,dodge:0,dodgeCool:0,energyClock:0,runClock:0,chain:0,combo:0,queue:false};
- enemies=[];if(world.boss)enemies.push(makeEnemy(790,3));else for(let i=0;i<11;i++){let x=270+i*185;while(world.gaps.some(([a,b])=>x>a-40&&x<b+40))x+=95;enemies.push(makeEnemy(x,(i+zone+selected)%3));}
+ environment=environments[['nucleus','dna','rna','mitosis','crispr'].includes(ranger.id)?'archive':['atp','membrane','mito','golgi','smoother','lysosome'].includes(ranger.id)?'membranes':'environment'];player={x:90,y:FLOOR,vx:0,vy:0,face:1,hp:10,energy:6,ground:true,coyote:.1,jumpBuffer:0,action:null,inv:0,dodge:0,dodgeCool:0,energyClock:0,runClock:0,chain:0,combo:0,queue:false,carry:null,ride:null,latch:null};
+ enemies=[];if(world.boss)enemies.push(makeEnemy(790,3));else for(const [x,type] of world.spawns)enemies.push(makeEnemy(x,type));
  camera=0;bolts=[];particles=[];pickups=[];ghosts=[];rings=[];hitStop=0;shake=0;comboCount=0;comboTimer=0;$('overlay').hidden=true;$('speech').hidden=true;
  profile.checkpoint={id:ranger.id,zone,run:structuredClone(run)};save();
  const intro=world.boss?ranger.boss:ranger.tasks[zone][0]+'. '+(zone===0?ranger.intro:'The next station is in '+ranger.zones[zone]+'.');
- const lines=[['crispr',intro],[ranger.id,world.boss?'At half strength he will raise a shield. I’ll use the control station on the left to disable it, then finish the fight.':MISSION_STYLES[ranger.id][1]+' First, I’ll collect the three '+CARGO[ranger.id][zone].toLowerCase()+' capsules.']];
- if(zone===0)lines.push(['crispr','Z chains two punches into a kick. In the air, hold ↓ and press Z for a dive kick. X draws your blaster and C dodges. Jump to reach the capsules, then press E at the station.']);
+ const molecule=CARGO[ranger.id][zone]?.toLowerCase();
+ const styleLine={platform:'The route ahead is broken. Ride the moving platforms, stay out of the toxic pools, and grab the three '+molecule+' molecules.',
+  combat:'Phage forces are massing here. Survive each lockdown wave and I’ll recover a '+molecule+' molecule from every arena.',
+  puzzle:'Three gates are sealed with biology locks. Solve each one to free a '+molecule+' molecule.'}[world.style];
+ const lines=[['crispr',intro],[ranger.id,world.boss?'At half strength he will raise a shield. I’ll use the control station on the left to disable it, then finish the fight.':styleLine]];
+ if(world.style==='puzzle')lines.push([ranger.id,world.rooms[0].cfg.line.replace(/\.$/,'')+'. '+(world.rooms[0].kind==='carry'?'E picks things up and uses machines.':world.rooms[0].kind==='sequence'?'I hit the switches with punches, kicks or dive kicks.':'I hit the switches with punches or kicks.')]);
+ if(zone===0)lines.push(['crispr','Z chains two punches into a kick. In the air, hold ↓ and press Z for a dive kick. X draws your blaster and C dodges. Press E at the station when you have all three molecules.']);
+ if(zone===0&&!world.boss)lines.push(['crispr',FAMILY[ENEMY_FAMILY[ranger.id]].tip]);
  talk(lines,()=>mode='play');updateHUD();
 }
-function makeEnemy(x,type){return {x,y:FLOOR,home:x,type,hp:type===3?70:5+type*2,max:type===3?70:5+type*2,face:-1,state:'approach',timer:.4+(x%5)*.1,clock:0,hurt:0,dead:0,attackCount:0,hit:false,walk:0};}
-function toast(text){$('toast').textContent=text;$('toast').hidden=false;toastTimer=2.8;}
-function updateHUD(){if(!player)return;$('rangerName').textContent=ranger.name.toUpperCase();$('health').firstElementChild.style.width=player.hp*10+'%';$('health').setAttribute('aria-valuenow',player.hp);$('energy').textContent='BLASTER '+Math.floor(player.energy)+'/6';const count=world.cells.filter(c=>c.taken).length;$('objective').textContent=world.boss?(world.shieldActive&&!world.shieldUnlocked?'PHAGE SHIELD · Left station [E]':'PHAGE · Final encounter'):ranger.zones[zone]+' · '+(world.terminal.done?'Reach the exit':count<3?CARGO[ranger.id][zone]+' '+count+'/3':'Activate station [E]');}
+function makeEnemy(x,type){const family=type===3?'phage':ENEMY_FAMILY[ranger.id]||'bacteria',info=FAMILY[family],hp=type===3?70:Math.max(3,5+type*2+(info?.hp||0));return {x,y:FLOOR,home:x,type,family,hp,max:hp,face:-1,state:'approach',timer:.4+(x%5)*.1,clock:0,hurt:0,dead:0,attackCount:0,hit:false,walk:0,scale:1,drop:0,lift:0};}
+function toast(text,seconds=2.8){$('toast').textContent=text;$('toast').hidden=false;toastTimer=seconds;}
+function updateHUD(){if(!player)return;$('rangerName').textContent=ranger.name.toUpperCase();$('health').firstElementChild.style.width=player.hp*10+'%';$('health').setAttribute('aria-valuenow',player.hp);$('energy').textContent='BLASTER '+Math.floor(player.energy)+'/6';const count=world.cells.filter(c=>c.taken).length;const extra=world.lock?'LOCKDOWN · wave '+(world.lock.wave+1)+'/'+world.lock.waves.length:world.style==='puzzle'?puzzleObjective():null;$('objective').textContent=world.boss?(world.shieldActive&&!world.shieldUnlocked?'PHAGE SHIELD · Left station [E]':'PHAGE · Final encounter'):ranger.zones[zone]+' · '+(world.terminal.done?'Reach the exit':extra&&count<3?extra+' · '+CARGO[ranger.id][zone]+' '+count+'/3':count<3?CARGO[ranger.id][zone]+' '+count+'/3':'Activate station [E]');}
 function burst(x,y,color,count=12){for(let i=0;i<count;i++){const a=Math.random()*Math.PI*2,s=30+Math.random()*120;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-40,life:.25+Math.random()*.25,max:.5,color});}}
 function attack(kind){if(player.dodge>0||player.inv>.68)return;if(player.action){if(kind==='melee')player.queue=true;return;}if(kind==='shoot'&&player.energy<1){toast('Blaster recharging — melee restores energy');return;}
  if(kind==='melee'){player.combo=player.chain>0?player.combo%3+1:1;player.action={kind:player.combo===3?'kick':'punch',time:0,duration:player.combo===3?.5:.34,hit:false};player.queue=false;}
@@ -1307,6 +1751,7 @@ function updateDive(p,dt){
  a.trail=(a.trail||0)+dt;if(a.trail>.025){a.trail=0;ghosts.push({x:p.x,y:p.y,face:p.face,life:.2});}
  if(Math.random()<.6)particles.push({x:p.x-p.face*(10+Math.random()*30),y:p.y-20-Math.random()*50,vx:-p.face*120,vy:-200,life:.12,max:.12,color:'#e9fff8'});
  const footX=p.x+p.face*29,footY=p.y-2;
+ const room=roomAt(p.x);if(room?.switches)for(const s of room.switches){const top=switchBase(room,s)-30;if(Math.abs(s.x-footX)<28&&footY>top-6&&footY<top+30){pressSwitch(room,s);hitStop=.05;p.vy=-300;p.vx=-p.face*60;p.action=null;p.chain=.5;return;}}
  for(const e of enemies){
   if(e.hp<=0)continue;const boss=e.type===3;
   if(Math.abs(e.x-footX)<(boss?46:32)&&footY>e.y-(boss?102:50)&&footY<e.y+6){
@@ -1329,13 +1774,20 @@ function damageEnemy(e,amount,knock=14){
    toast('Phage shield online — restore the left control station');updateHUD();return;
   }
  }
- e.hp=Math.max(0,e.hp-amount);e.hurt=.16;if(e.type!==3){const nx=e.x+player.face*knock;if(!world.gaps.some(([a,b])=>nx>a-12&&nx<b+12))e.x=clamp(nx,30,world.length-30);e.state='recover';e.timer=.3;}
+ e.hp=Math.max(0,e.hp-amount);e.hurt=.16;if(e.latched)releaseLatch(e);
+ if(e.family==='mutant'&&!e.child&&e.hp>0&&e.hp<=e.max/2)splitMutant(e);if(e.type!==3){enemyStep(e,e.x+player.face*knock);e.state='recover';e.timer=.3;}
  burst(e.x,e.y-(e.type===3?55:27),'#d0fff0',e.hp?10:24);hitStop=.045;shake=e.type===3?3:2;comboCount++;comboTimer=1.6;run.score+=amount*10;tone(e.hp?120:75,.09,'sawtooth');
- if(e.hp===0){e.dead=.5;if(e.type!==3)pickups.push({x:e.x,y:FLOOR-20,kind:Math.random()<.4?'health':'energy',life:16});else{world.cleared=true;bolts=[];toast('Phage defeated — the cell is recovering');}}
+  if(e.hp===0){e.dead=.5;if(e.type!==3&&!e.removed)pickups.push({x:e.x,y:FLOOR-20,kind:Math.random()<.4?'health':'energy',life:16});else{world.cleared=true;bolts=[];toast('Phage defeated — the cell is recovering');}}
 }
+function splitMutant(e){
+ e.child=true;e.max=Math.ceil(e.max/2);e.hp=Math.min(e.hp,e.max);e.scale=.74;
+ const twin={...e,x:clamp(e.x+player.face*24,35,world.length-35),face:-e.face,timer:.5,state:'recover',hurt:.2};enemies.push(twin);
+ burst(e.x,e.y-20,'#c58cff',16);if(!world.splitTold){world.splitTold=true;toast('The mutated cell divided — finish them fast!');}
+}
+function releaseLatch(e){e.latched=false;if(player.latch===e)player.latch=null;e.x=clamp(e.x-player.face*44,35,world.length-35);e.y=FLOOR;e.state='recover';e.timer=.9;e.hurt=.25;burst(player.x,player.y-30,'#a8ffd9',10);}
 function damagePlayer(amount,sourceX){if(player.inv>0||player.dodge>0||mode!=='play')return;player.hp=Math.max(0,player.hp-amount);player.inv=.85;player.action=null;player.queue=false;player.vx=(player.x<sourceX?-1:1)*110;shake=4;burst(player.x,player.y-35,'#ff7999');tone(90,.12,'sawtooth');updateHUD();if(!player.hp){mode='lost';run.retries++;showModal('CHECKPOINT','Regroup and try again','Your mission progress through earlier zones is saved.',[['Retry this zone',()=>loadZone(zone)],['Choose a Ranger',goHome]]);}}
 function terminal(){
- if(world.terminal.done||Math.abs(player.x-world.terminal.x)>70)return;
+ if(world.terminal.done||Math.abs(player.x-world.terminal.x)>70){if(world.style==='puzzle'&&!world.boss)carryInteract();return;}
  if(world.boss){
   if(!world.shieldActive){toast('The shield controls will activate at half boss health');return;}
   openMissionPuzzle(true);return;
@@ -1355,7 +1807,7 @@ function exportResults(){
  const quote=v=>'"'+String(v).replace(/^[=+@-]/,"'$&").replaceAll('"','""')+'"';const blob=new Blob(['\ufeff'+rows.map(r=>r.map(quote).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='Organelle-Rangers-results.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 function pause(){if(mode==='play'){mode='pause';showModal('PAUSED',ranger.title,'Take a breather. Your current zone will wait.',[['Resume',()=>{$('overlay').hidden=true;mode='play';canvas.focus();}],['Restart zone',()=>loadZone(zone)],['Choose a Ranger',goHome]]);}else if(mode==='pause'){$('overlay').hidden=true;mode='play';canvas.focus();}}
-function surfaces(x){const list=world.platforms.filter(([a,w])=>x>=a-6&&x<=a+w+6).map(p=>p[2]);if(!world.gaps.some(([a,b])=>x>a&&x<b))list.push(FLOOR);return list.sort((a,b)=>a-b);}
+function surfaces(x){/* kept for older callers */const list=world.platforms.filter(([a,w])=>x>=a-6&&x<=a+w+6).map(p=>p[2]);if(!world.gaps.some(([a,b])=>x>a&&x<b))list.push(FLOOR);return list.sort((a,b)=>a-b);}
 function step(dt){
  if(mode!=='play')return;
  run.seconds+=dt;clock+=dt;if(hitStop>0){hitStop-=dt;return;}
@@ -1366,50 +1818,64 @@ function step(dt){
  if(taps.has('ArrowUp')||taps.has('Space'))p.jumpBuffer=.12;
  if(p.jumpBuffer&&p.coyote){p.vy=-420;p.ground=false;p.coyote=0;p.jumpBuffer=0;tone(360,.09,'triangle');}
  if(taps.has('KeyZ')){if(!p.ground&&(keys.has('ArrowDown')||keys.has('KeyS')))diveKick();else attack('melee');}if(taps.has('KeyX'))attack('shoot');
- if(taps.has('KeyC')&&!p.dodgeCool&&!p.action){p.dodge=.24;p.dodgeCool=.8;burst(p.x,p.y-10,'#8effeb',5);tone(260,.08,'triangle');}
+ if(taps.has('KeyC')&&!p.dodgeCool&&!p.action){if(p.latch)releaseLatch(p.latch);p.dodge=.24;p.dodgeCool=.8;burst(p.x,p.y-10,'#8effeb',5);tone(260,.08,'triangle');}
  if(taps.has('KeyE'))terminal();if(mode!=='play')return;
  const direction=Number(keys.has('ArrowRight')||keys.has('KeyD'))-Number(keys.has('ArrowLeft')||keys.has('KeyA'));
  if(direction&&!p.action&&!p.dodge)p.face=direction;
+ updateLevel(dt);if(mode!=='play')return;
+ if(p.ground&&p.ride){p.x+=p.ride.dx||0;p.y+=p.ride.dy||0;}
  const diving=p.action?.kind==='dive';
  if(diving){if(p.action.time<DIVE_TUCK){p.vx=0;p.vy=-40;}else{p.vx=p.face*270;p.vy=660;}}
- else{const target=p.dodge?p.face*360:direction*(p.action?30:152);const acceleration=p.ground?1500:700;p.vx+=clamp(target-p.vx,-acceleration*dt,acceleration*dt);}
- p.x=clamp(p.x+p.vx*dt,20,world.length-25);p.runClock+=Math.abs(p.vx)*dt/16;
+ else{const target=(p.dodge?p.face*360:direction*(p.action?30:152))*(p.latch?.55:1);const acceleration=p.ground?1500:700;p.vx+=clamp(target-p.vx,-acceleration*dt,acceleration*dt);}
+ const oldX=p.x;p.x=blockByWalls(oldX,clamp(p.x+p.vx*dt,20,world.length-25),p.y);p.runClock+=Math.abs(p.vx)*dt/16;
  const oldY=p.y;if(!diving)p.vy+=950*dt;p.y+=p.vy*dt;p.ground=false;
- for(const y of surfaces(p.x))if(p.vy>=0&&oldY<=y+.5&&p.y>=y){p.y=y;p.vy=0;p.ground=true;break;}
+ p.ride=null;for(const s of surfacesAt(p.x))if(p.vy>=0&&oldY<=Math.max(s.y,s.prev)+.5&&p.y>=s.y){p.y=s.y;p.vy=0;p.ground=true;p.ride=s.mover||null;break;}
  if(p.y>H+90){p.inv=0;damagePlayer(2,p.x);if(mode!=='play')return;const gap=world.gaps.find(([a,b])=>p.x>a-30&&p.x<b+30);p.x=gap?gap[0]-35:90;p.y=FLOOR;p.vy=0;p.inv=1;}
  p.energyClock+=dt;if(p.energyClock>=2){p.energyClock=0;p.energy=Math.min(6,p.energy+.5);updateHUD();}
  if(p.action?.kind==='dive')updateDive(p,dt);
  else if(p.action){const a=p.action;a.time+=dt;const contact=a.kind==='shoot'?.2:a.kind==='kick'?.2:.14;
   if(!a.hit&&a.time>=contact){a.hit=true;if(a.kind==='shoot'){bolts.push({x:p.x+p.face*40,y:p.y-48,vx:p.face*500,life:1.2,enemy:false,damage:3});tone(800,.12,'sawtooth');}
-   else{tone(a.kind==='kick'?170:240,.07,'triangle');for(const e of enemies)if(e.hp>0&&(e.x-p.x)*p.face>-15&&Math.abs(e.x-p.x)<(a.kind==='kick'?87:68)&&Math.abs(e.y-p.y)<65){damageEnemy(e,a.kind==='kick'?4:2,a.kind==='kick'?32:12);p.energy=Math.min(6,p.energy+.25);}updateHUD();}}
+   else{tone(a.kind==='kick'?170:240,.07,'triangle');if(p.latch)releaseLatch(p.latch);strikeSwitches(p.x,p.face,a.kind==='kick'?80:62);for(const e of enemies)if(e.hp>0&&(e.x-p.x)*p.face>-15&&Math.abs(e.x-p.x)<(a.kind==='kick'?87:68)&&Math.abs(e.y-p.y)<65){damageEnemy(e,a.kind==='kick'?4:2,a.kind==='kick'?32:12);p.energy=Math.min(6,p.energy+.25);}updateHUD();}}
   if(a.time>=a.duration){const queued=p.queue;p.action=null;p.chain=.5;if(queued)attack('melee');}
  }
  for(const e of enemies)updateEnemy(e,dt);
  for(const b of bolts){const before=b.x;b.x+=b.vx*dt;b.life-=dt;if(b.enemy){if(p.x>=Math.min(before,b.x)-11&&p.x<=Math.max(before,b.x)+11&&Math.abs(b.y-(p.y-35))<30){damagePlayer(b.damage,p.x-Math.sign(b.vx));b.life=0;}}
  else for(const e of enemies)if(e.hp>0&&e.x>=Math.min(before,b.x)-20&&e.x<=Math.max(before,b.x)+20&&Math.abs(b.y-(e.y-(e.type===3?55:25)))<(e.type===3?52:33)){damageEnemy(e,b.damage,9);b.life=0;break;}}
  bolts=bolts.filter(b=>b.life>0);
- for(const cell of world.cells)if(!cell.taken&&Math.abs(cell.x-p.x)<26&&Math.abs(cell.y-(p.y-30))<44){cell.taken=true;burst(cell.x,cell.y,ranger.color,15);run.score+=100;tone(620,.13,'triangle');updateHUD();toast('Supply capsule '+world.cells.filter(c=>c.taken).length+'/3');}
+ for(const cell of world.cells)if(!cell.taken&&!cell.hidden&&Math.abs(cell.x-p.x)<26&&Math.abs(cell.y-(p.y-30))<44){cell.taken=true;burst(cell.x,cell.y,ranger.color,15);run.score+=100;tone(620,.13,'triangle');updateHUD();const n=world.cells.filter(c=>c.taken).length,[name,,fact]=MOLECULES[ranger.id][zone];toast(name+' '+n+'/3 — '+fact,n===1?5:3);}
  for(const item of pickups){item.life-=dt;if(Math.abs(item.x-p.x)<25&&Math.abs(item.y-(p.y-20))<45){if(item.kind==='health')p.hp=Math.min(10,p.hp+2);else p.energy=Math.min(6,p.energy+2);item.life=0;tone(480,.09,'triangle');updateHUD();}}
  pickups=pickups.filter(p=>p.life>0);
  for(const m of particles){m.life-=dt;m.x+=m.vx*dt;m.y+=m.vy*dt;m.vy+=250*dt;}particles=particles.filter(m=>m.life>0);for(const g of ghosts)g.life-=dt;ghosts=ghosts.filter(g=>g.life>0);for(const r of rings)r.life-=dt;rings=rings.filter(r=>r.life>0);shake=Math.max(0,shake-dt*22);
- camera+=(clamp(p.x-W*.38,0,world.length-W)-camera)*Math.min(1,dt*8);
+ const camTarget=world.lock?clamp((world.lock.a+world.lock.b)/2-W/2,0,world.length-W):clamp(p.x-W*.38,0,world.length-W);camera+=(camTarget-camera)*Math.min(1,dt*8);
  if(world.boss&&world.cleared&&enemies.every(e=>e.dead<=0)){finishMission();return;}
  if(!world.boss&&p.x>world.length-65){if(world.terminal.done)loadZone(zone+1);else if(toastTimer<=0)toast('Restore the station before leaving this zone');}
 }
+function enemyStep(e,nx){if(world.gaps.some(([a,b])=>nx>a-18&&nx<b+18))return false;for(const w of world.walls)if(!w.open&&(e.x-w.x)*(nx-w.x)<=0)return false;if(e.arena)nx=clamp(nx,e.arena.a+20,e.arena.b-20);e.x=clamp(nx,35,world.length-35);return true;}
 function updateEnemy(e,dt){
  e.clock+=dt;e.hurt=Math.max(0,e.hurt-dt);if(e.hp<=0){e.dead=Math.max(0,e.dead-dt);return;}
+ if(e.drop<0){e.drop=Math.min(0,e.drop+520*dt);e.y=FLOOR+e.drop;if(!e.drop){burst(e.x,FLOOR-6,'#d0fff0',10);shake=Math.max(shake,2);}return;}
+ const fam=FAMILY[e.family]||{};
+ if(e.latched){const p=player;e.x=p.x-p.face*10;e.y=p.y;e.drain=(e.drain||0)+dt;if(e.drain>1.5){e.drain=0;p.inv=0;damagePlayer(1,e.x);}return;}
+ if(e.family==='radical'&&e.type!==2){e.y=FLOOR-18-Math.round(Math.sin(e.clock*3.3+e.home)*10+10);}
+ if(e.family==='misfolded'&&!e.merged){const o=enemies.find(o=>o!==e&&o.family==='misfolded'&&o.hp>0&&!o.merged&&Math.abs(o.x-e.x)<34);
+  if(o){e.mergeT=(e.mergeT||0)+dt;if(e.mergeT>1.3){e.hp+=o.hp;e.max+=o.max;e.merged=true;e.scale=1.28;o.hp=0;o.removed=true;o.dead=.01;burst(e.x,e.y-30,'#ffb3e0',20);toast('Misfolded proteins clumped together!');}}else e.mergeT=0;}
+ if(e.family==='miniphage'&&e.type!==1){
+  if(e.air){e.x=enemyStep(e,e.x+e.hopVx*dt)?e.x:e.x;e.vy+=950*dt;e.lift+=e.vy*dt;if(e.lift>=0){e.lift=0;e.air=false;e.timer=.9;e.state='recover';burst(e.x,FLOOR-4,'#d0fff0',8);if(Math.abs(e.x-player.x)<38&&Math.abs(player.y-FLOOR)<30)damagePlayer(1,e.x);}e.y=FLOOR+e.lift;return;}
+  const dx=player.x-e.x;if(e.state==='approach'&&e.timer<=0&&Math.abs(dx)<260&&Math.abs(dx)>30&&Math.abs(e.x-player.x)<W*.8){e.air=true;e.vy=-360;e.lift=-1;e.hopVx=Math.sign(dx)*Math.min(170,Math.abs(dx)/0.76);e.face=Math.sign(dx)||1;tone(420,.08,'triangle',.015);return;}
+ }
  if(Math.abs(e.x-player.x)>W*.8)return;e.timer-=dt;const dx=player.x-e.x,dist=Math.abs(dx);if(e.state==='approach')e.face=dx>=0?1:-1;
  if(e.hurt>0)return;
  const boss=e.type===3;
  if(e.state==='approach'){
   const range=e.type===1?240:boss?170:62;
-  if(dist>range){const nx=e.x+e.face*(boss?47:e.type===2?68:48)*dt;if(!world.gaps.some(([a,b])=>nx>a-18&&nx<b+18)){e.x=clamp(nx,35,world.length-35);e.walk+=dt*9;}}
+  if(dist>range){const jitter=e.family==='radical'?Math.sin(e.clock*7+e.home)*.9:0;const nx=e.x+(e.face+jitter)*(boss?47:e.type===2?68:48)*(fam.speed||1)*dt;if(enemyStep(e,nx))e.walk+=dt*9*(fam.speed||1);}
   if(dist<range+30&&e.timer<=0){e.state='windup';e.timer=boss?.7:.48;e.hit=false;e.attackCount++;e.attack=boss?(e.attackCount%3===0?'blast':'slam'):e.type===1?'spit':e.type===2?'charge':'claw';}
  }else if(e.state==='windup'&&e.timer<=0){e.state='active';e.timer=e.attack==='charge'?.38:.22;
   if(e.attack==='blast'||e.attack==='spit'){bolts.push({x:e.x+e.face*35,y:e.y-(boss?49:29),vx:e.face*(boss?250:165),life:2.5,enemy:true,damage:boss?2:1});if(boss&&e.hp<35)bolts.push({x:e.x+e.face*35,y:e.y-90,vx:e.face*220,life:2.5,enemy:true,damage:1});tone(95,.18,'sawtooth');}
  }else if(e.state==='active'){
-  if(e.attack==='charge'){const nx=e.x+e.face*210*dt;if(!world.gaps.some(([a,b])=>nx>a-15&&nx<b+15))e.x=clamp(nx,35,world.length-35);}
-  if(!e.hit&&e.attack!=='spit'&&e.attack!=='blast'&&Math.abs(e.x-player.x)<(boss?125:55)&&Math.abs(e.y-player.y)<(boss?50:40)){damagePlayer(boss?2:1,e.x);e.hit=true;}
+  if(e.attack==='charge'){enemyStep(e,e.x+e.face*210*(e.family==='misfolded'?.7:1)*dt);}
+  if(!e.hit&&e.attack!=='spit'&&e.attack!=='blast'&&Math.abs(e.x-player.x)<(boss?125:55)&&Math.abs(e.y-player.y)<(boss?50:40)){const could=player.inv<=0&&player.dodge<=0;damagePlayer(boss?2:1,e.x);e.hit=true;
+   if(could&&e.family==='retrovirus'&&e.type===0&&!player.latch&&mode==='play'){e.latched=true;player.latch=e;e.drain=0;toast('A retrovirus latched on — attack or dodge to shake it off!');}}
   if(e.timer<=0){e.state='recover';e.timer=boss?1.1:.65;}
  }else if(e.state==='recover'&&e.timer<=0){e.state='approach';e.timer=boss?.65:.35;}
 }
@@ -1423,7 +1889,7 @@ function frameForPlayer(){const p=player;if(p.inv>.68)return 15;if(p.dodge>0)ret
 function frameForEnemy(e){if(e.type===3){if(e.hp<=0)return 7;if(e.hurt>0)return 6;if(e.state==='windup')return e.attack==='blast'?4:2;if(e.state==='active')return e.attack==='blast'?5:3;return Math.floor(e.walk)%2;}return e.type*4+(e.state==='windup'?2:e.state==='active'?3:Math.floor(e.walk)%2);}
 function rect(color,x,y,w,h){ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.ceil(w),Math.ceil(h));}
 function text(value,x,y,size=10,color='#e8fff5',align='left'){ctx.font='bold '+size+'px monospace';ctx.textAlign=align;ctx.fillStyle='#081120';ctx.fillText(value,x+1,y+1);ctx.fillStyle=color;ctx.fillText(value,x,y);}
-function drawSprite(id,index,x,y,face=1,alpha=1,rot=0){const art=atlases[id]?.[index];if(!art)return;ctx.save();ctx.translate(Math.round(x-camera),Math.round(y));ctx.scale(face,1);if(rot){ctx.translate(0,DIVE_DROP-38);ctx.rotate(rot);ctx.translate(0,38);}ctx.globalAlpha=alpha;ctx.drawImage(art,-64,-102);ctx.restore();}
+function drawSprite(id,index,x,y,face=1,alpha=1,rot=0,scale=1){const art=atlases[id]?.[index];if(!art)return;ctx.save();ctx.translate(Math.round(x-camera),Math.round(y));ctx.scale(face*scale,scale);if(rot){ctx.translate(0,DIVE_DROP-38);ctx.rotate(rot);ctx.translate(0,38);}ctx.globalAlpha=alpha;ctx.drawImage(art,-64,-102);ctx.restore();}
 const DIVE_ANGLE=.72,DIVE_DROP=9;
 function drawPlatform(x,y,w,base=false){x-=camera;rect('#0a182b',x,y,w,base?60:18);rect('#6ecbbf',x,y,w,3);rect('#a8fbe1',x+2,y,w-4,1);rect('#324b66',x,y+4,w,base?48:12);rect('#17283e',x,y+13,w,3);
  for(let j=0;j<w;j+=32){rect('#52788a',x+j+3,y+6,23,2);rect('#0f1f34',x+j+28,y+5,2,base?42:10);rect('#93d5c5',x+j+8,y+10,2,2);if(base){rect('#243c56',x+j+4,y+20,21,22);rect('#405e75',x+j+6,y+22,18,1);rect('#547b84',x+j+10,y+39,9,2);}}
@@ -1435,16 +1901,20 @@ function draw(){
  for(let i=0;i<24;i++){const x=((i*79-clock*(4+i%3)-camera*.12)%W+W)%W,y=70+(i*47)%210;rect(i%3?'#80d8d755':'#f9d98a77',x,y,1,1);}
  let from=0;for(const [a,b]of [...world.gaps,[world.length,world.length]]){if(a>camera&&from<camera+W)drawPlatform(Math.max(from,Math.floor(camera/32)*32),FLOOR,Math.min(a,camera+W+32)-Math.max(from,Math.floor(camera/32)*32),true);from=b;}
  for(const [x,w,y]of world.platforms)if(x+w>camera&&x<camera+W)drawPlatform(x,y,w);
- for(const cell of world.cells)if(!cell.taken){const x=cell.x-camera,y=cell.y+Math.sin(clock*3+cell.x)*3;ctx.strokeStyle='#9fffea';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,12,0,Math.PI*2);ctx.stroke();rect('#203e5f',x-6,y-9,12,18);rect(ranger.color,x-4,y-7,8,14);rect('#e6fff4',x-3,y-6,2,8);text(CARGO[ranger.id][zone].toUpperCase(),x,y-18,8,'#d4fff1','center');}
+ drawLevelBack();
+ world.cells.forEach((cell,i)=>{if(cell.taken||cell.hidden)return;const x=cell.x-camera,y=cell.y+Math.sin(clock*3+cell.x)*3;if(x<-40||x>W+40)return;const [name,icon]=MOLECULES[ranger.id][zone];
+  ctx.fillStyle='#7cf7df22';ctx.beginPath();ctx.arc(x,y,17,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#9fffea';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(x,y,17+Math.sin(clock*4)*1.5,0,Math.PI*2);ctx.stroke();
+  ctx.save();ctx.imageSmoothingEnabled=true;ctx.drawImage(moleculeIcon(icon,i),Math.round(x-17),Math.round(y-17));ctx.restore();text(name.toUpperCase(),x,y-24,8,'#d4fff1','center');});
  if(world.terminal){const t=world.terminal,x=t.x-camera;rect('#10263f',x-21,FLOOR-52,42,52);rect('#6b91a7',x-23,FLOOR-54,46,4);rect(t.done?'#7ef2bf':'#5dc1df',x-16,FLOOR-46,32,23);rect('#1d4c63',x-13,FLOOR-43,26,16);for(let i=0;i<3;i++)rect(t.done?'#b8ffe0':'#92e8ff',x-10,FLOOR-40+i*5,19-i*3,2);rect('#ffd887',x-6,FLOOR-15,12,4);if(Math.abs(player.x-t.x)<80&&!t.done)text('E · '+(world.boss?'Shield control':MISSION_STYLES[ranger.id][0]),x,FLOOR-65,10,'#fff0b2','center');}
  if(!world.boss){const x=world.length-48-camera;rect('#11273d',x-23,FLOOR-100,46,100);rect(world.terminal.done?'#8bffe2':'#586c87',x-20,FLOOR-97,40,3);rect('#46798b',x-20,FLOOR-94,3,94);rect('#46798b',x+17,FLOOR-94,3,94);rect(world.terminal.done?'#78edce55':'#ff819833',x-16,FLOOR-90,32,90);text('EXIT',x,FLOOR-106,10,'#d8ffed','center');}
  for(const item of pickups){const x=item.x-camera,y=item.y+Math.sin(clock*5)*2;rect(item.kind==='health'?'#ff9faa':'#8deaff',x-5,y-5,10,10);rect('#fff7e6',x-1,y-3,2,6);if(item.kind==='health')rect('#fff7e6',x-3,y-1,6,2);}
- for(const e of enemies)if((e.hp>0||e.dead>0)&&Math.abs(e.x-camera-W/2)<W/2+140){ctx.fillStyle='#08132488';ctx.beginPath();ctx.ellipse(e.x-camera,e.y+2,e.type===3?30:23,5,0,0,7);ctx.fill();drawSprite(e.type===3?'phage':'bacteria',frameForEnemy(e),e.x,e.y,-e.face,e.hp?1:Math.min(1,e.dead*3));
+ for(const e of enemies)if((e.hp>0||e.dead>0)&&Math.abs(e.x-camera-W/2)<W/2+140){ctx.fillStyle='#08132488';ctx.beginPath();ctx.ellipse(e.x-camera,(e.lift||e.y<FLOOR-4?FLOOR:e.y)+2,(e.type===3?30:23)*(e.scale||1),5,0,0,7);ctx.fill();if(e.drop<0){ctx.globalAlpha=.6;rect('#ff5d8f',e.x-camera-1,0,2,e.y-20);ctx.globalAlpha=1;}drawSprite(e.type===3?'phage':e.family,frameForEnemy(e),e.x,e.y,-e.face,e.hp?1:Math.min(1,e.dead*3),0,e.scale||1);if(e.latched)text('LATCHED',e.x-camera,e.y-62,8,'#a8ffd9','center');
  if(e.type===3&&world.shieldActive&&!world.shieldUnlocked){ctx.strokeStyle='#75e7ff';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(e.x-camera,e.y-55,50,63,0,0,Math.PI*2);ctx.stroke();}
  if(e.state==='windup')text('!',e.x-camera,e.y-(e.type===3?115:65),19,'#ffdb8a','center');if(e.type!==3&&e.hp<e.max){rect('#17233c',e.x-camera-18,e.y-59,36,3);rect('#d0ed8e',e.x-camera-18,e.y-59,36*e.hp/e.max,3);}}
  ctx.fillStyle='#08132488';ctx.beginPath();ctx.ellipse(player.x-camera,Math.min(player.y+2,FLOOR+2),22,4,0,0,7);ctx.fill();for(const r of rings){const k=1-r.life/.38;ctx.globalAlpha=r.life/.38;ctx.strokeStyle='#bff4ff';ctx.lineWidth=3-k*2;ctx.beginPath();ctx.ellipse(r.x-camera,r.y+1,18+k*74,4+k*9,0,0,Math.PI*2);ctx.stroke();}ctx.globalAlpha=1;
  for(const g of ghosts)drawSprite(ranger.id,9,g.x,g.y,g.face,g.life/.2*.32,DIVE_ANGLE);
  const diving=player.action?.kind==='dive'&&player.action.time>=DIVE_TUCK;drawSprite(ranger.id,frameForPlayer(),player.x,player.y,player.face,player.inv>0&&Math.floor(clock*16)%2?.55:1,diving?DIVE_ANGLE:0);
+ if(player.carry){ctx.save();ctx.imageSmoothingEnabled=true;ctx.drawImage(moleculeIcon(player.carry.key),Math.round(player.x-camera-17),Math.round(player.y-112+Math.sin(clock*6)*2));ctx.restore();}
  for(const b of bolts){const x=b.x-camera;rect(b.enemy?'#ee6fb7':'#48cde8',x-Math.sign(b.vx)*17,b.y-3,18,6);rect(b.enemy?'#ffd0ec':'#e1ffff',x-Math.sign(b.vx)*12,b.y-1,14,2);}
  for(const p of particles){ctx.globalAlpha=clamp(p.life/p.max,0,1);rect(p.color,p.x-camera,p.y,3,3);}ctx.globalAlpha=1;
  if(comboCount>1)text(comboCount+' HIT',W-18,86,15,'#ffe1a1','right');

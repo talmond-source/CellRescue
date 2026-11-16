@@ -116,7 +116,7 @@ const CARRY={
   hint:'mRNA leaves through nuclear pores. DNA and its histones stay inside.'};}
 };
 const METER={
- mito:r=>({variant:'gate',title:'ATP TURBINE',line:'Pump H⁺ with the transport chain. A full gradient spins ATP synthase open.',label:'H⁺ GRADIENT',gain:24,leak:7,cool:.8,threshold:[55,65,75][r],pumps:r<2?[70,150]:[70,150,230],high:r===2?[230]:[],
+ mito:r=>({variant:'gate',title:'ATP TURBINE',line:'Pump H⁺ with the transport chain. A full gradient spins ATP synthase open.',label:'H⁺ GRADIENT',gain:24,leak:[6,7,8][r],cool:1,threshold:[50,60,68][r],pumps:r<2?[70,150]:[70,150,230],high:r===2?[230]:[],
   pumpLabel:'ETC PUMP',hint:'Hit the transport-chain pumps quickly. While H⁺ is high, ATP synthase spins and the door opens.'}),
  lysosome:r=>({variant:'dissolve',title:'ACID CHAMBER',line:'Run the proton pumps until the pH drops to 5. Acid lets the enzymes digest the blockage.',label:'pH',gain:20,leak:[4,5,6][r],cool:1.1,threshold:100,pumps:r===0?[70,170]:[70,170,270],high:r===2?[170]:[],
   pumpLabel:'H⁺ PUMP',hint:'Use every pump in turn. Lysosome enzymes only work in acid (about pH 5).'}),
@@ -202,7 +202,7 @@ function updateRoom(room,dt){
  for(const m of room.machines||[])m.flash=Math.max(0,m.flash-dt);
  if(!room.entered&&player.x>room.a-20&&player.x<room.b){room.entered=true;toast(room.cfg.line);}
  if(room.kind==='meter'&&!room.solved){
-  const c=room.cfg;room.meter=Math.max(0,room.meter-c.leak*dt);
+  const c=room.cfg;if(c.variant==='dissolve'&&room.meter>=100){solveRoom(room);return;}room.meter=Math.max(0,room.meter-c.leak*dt);
   if(c.variant==='gate'){room.wall.open=room.meter>=c.threshold;if(player.x>room.b+16)solveRoom(room);}
   if(c.variant==='dissolve'&&room.meter>=100)solveRoom(room);
   if(c.variant==='lift'&&player.x>room.b+16)solveRoom(room);

@@ -155,4 +155,21 @@ evaluate("ranger=RANGERS.find(r=>r.id==='crispr');selected=RANGERS.indexOf(range
 check(evaluate("hopped"),'Mini-phages leap');checks++;
 evaluate("ranger=RANGERS.find(r=>r.id==='mito');selected=RANGERS.indexOf(ranger);startMission();while(mode==='dialog')nextLine();var fr=makeEnemy(player.x+300,0);enemies=[fr];for(let n=0;n<30;n++)updateEnemy(fr,1/60);");
 check(evaluate("fr.y<FLOOR-10"),'Free radicals float');checks++;
+
+// Bots play the hardest meter rooms with real inputs and physics.
+evaluate(`var botResult={};var play=(id)=>{ranger=RANGERS.find(r=>r.id===id);selected=RANGERS.indexOf(ranger);startMission();loadZone(ZONE_STYLES[id].indexOf('puzzle'));while(mode==='dialog')nextLine();enemies=[];world.rooms[0].solved=world.rooms[1].solved=true;world.rooms[0].wall.open=world.rooms[1].wall.open=true;return world.rooms[2];};
+ var press=()=>{taps.add('KeyZ');};var frames=(n,fn)=>{for(let i=0;i<n&&mode==='play';i++){if(fn)fn(i);hitStop=0;player.hp=10;step(1/60);taps.clear();}};
+ // Smooth ER: ride the lift, mash the lever, then jump onto the ledge
+ let room=play('smoother');player.x=room.lift.x+35;player.y=room.lift.y;player.face=1;frames(30);
+ frames(900,i=>{if(room.lift.y>room.cfg.ledge+24){if(i%14===0)press();}else{keys.add('ArrowRight');if(player.ground&&i%10===0)taps.add('Space');}});keys.clear();
+ botResult.smoother=room.solved;
+ // Mitochondria: work the first pump until the gradient is high, then sprint to the turbine door
+ var pump=(room,until)=>{const s=room.switches.find(s=>!s.high);let go=false;frames(2400,i=>{if(room.solved)return;if(room.meter>=until())go=true;if(!go){if(Math.abs(player.x-(s.x-30))>4){keys.clear();keys.add(player.x<s.x-30?'ArrowRight':'ArrowLeft');}else{keys.clear();player.face=1;if(s.cool<=0&&!player.action&&!player.chain)press();}}else{keys.clear();keys.add('ArrowRight');}});keys.clear();};
+ room=play('mito');pump(room,()=>95);botResult.mito=room.solved;
+ // Lysosome: keep pumping until the pH reaches 5
+ room=play('lysosome');pump(room,()=>101);
+ botResult.lysosome=room.solved;`);
+check(evaluate('botResult.smoother'),'Bot can climb the hardest calcium lift');checks++;
+check(evaluate('botResult.mito'),'Bot can run the hardest ATP synthase door');checks++;
+check(evaluate('botResult.lysosome'),'Bot can acidify the hardest lysosome chamber');checks++;
 console.log(JSON.stringify({checks,missions:14,result:'PASS'}));

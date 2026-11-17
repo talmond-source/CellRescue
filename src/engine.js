@@ -107,11 +107,11 @@ function typeStep(dt){
  if(now>before){const ch=t.text[now-1];if('.!?'.includes(ch)&&t.text[now]===' ')t.wait=.2;else if(',;:—'.includes(ch))t.wait=.08;
   if(/\S/.test(ch)&&++t.count%2===0)tone(t.pitch+(t.count%3)*40,.025,'triangle',.012);renderTyping();}
 }
-function nextLine(){if(mode!=='dialog')return;if(typing&&typing.shown<typing.text.length){typing.shown=typing.text.length;typing.wait=0;renderTyping();return;}if(!dialog.length){typing=null;$('speech').hidden=true;dialogDone();canvas.focus();return;}const [id,text]=dialog.shift();$('speaker').textContent=id==='phage'?'PHAGE':(RANGERS.find(r=>r.id===id)?.name||'CRISPR')+' RANGER';typing={text,shown:0,wait:.12,count:0,pitch:id==='phage'?260:id==='crispr'?560:680};$('line').setAttribute('aria-label',text);renderTyping();const g=$('portrait').getContext('2d');g.fillStyle='#203953';g.fillRect(0,0,72,88);g.imageSmoothingEnabled=false;if(portraits[id])g.drawImage(portraits[id],27,0,70,68,0,0,72,88);else g.drawImage(atlases.phage[0],30,0,66,66,0,0,72,88);}
+function nextLine(){if(mode!=='dialog')return;if(typing&&typing.shown<typing.text.length){typing.shown=typing.text.length;typing.wait=0;renderTyping();return;}if(!dialog.length){typing=null;$('speech').hidden=true;dialogDone();canvas.focus();return;}const [id,raw]=dialog.shift(),text=keyWords(raw);$('speaker').textContent=id==='phage'?'PHAGE':(RANGERS.find(r=>r.id===id)?.name||'CRISPR')+' RANGER';typing={text,shown:0,wait:.12,count:0,pitch:id==='phage'?260:id==='crispr'?560:680};$('line').setAttribute('aria-label',text);renderTyping();const g=$('portrait').getContext('2d');g.fillStyle='#203953';g.fillRect(0,0,72,88);g.imageSmoothingEnabled=false;if(portraits[id])g.drawImage(portraits[id],27,0,70,68,0,0,72,88);else g.drawImage(atlases.phage[0],30,0,66,66,0,0,72,88);}
 function startMission(resume=false){
  profile.name=$('student').value.trim();const cp=resume&&profile.checkpoint?.id===ranger.id?profile.checkpoint:null;
  run=cp?.run?structuredClone(cp.run):{id:Date.now(),seconds:0,answers:[],retries:0,score:0};
- $('missionSelect').hidden=true;$('screen').hidden=false;$('controls').hidden=false;$('mobile').hidden=false;$('pause').hidden=false;loadZone(cp?cp.zone:0);tone(520,.15,'triangle');
+ $('missionSelect').hidden=true;$('screen').hidden=false;$('controls').hidden=false;$('mobile').hidden=false;document.body?.classList?.add('playing');$('pause').hidden=false;loadZone(cp?cp.zone:0);tone(520,.15,'triangle');
 }
 function makeWorld(index){
  const boss=index===3,route=RANGERS.findIndex(r=>r.id===ranger.id);
@@ -136,7 +136,9 @@ function loadZone(index){
  talk(lines,()=>mode='play');updateHUD();
 }
 function makeEnemy(x,type){const family=type===3?'phage':ENEMY_FAMILY[ranger.id]||'bacteria',info=FAMILY[family],hp=type===3?70:Math.max(3,5+type*2+(info?.hp||0));return {x,y:FLOOR,home:x,type,family,hp,max:hp,face:-1,state:'approach',timer:.4+(x%5)*.1,clock:0,hurt:0,dead:0,attackCount:0,hit:false,walk:0,scale:1,drop:0,lift:0};}
-function toast(text,seconds=2.8){$('toast').textContent=text;$('toast').hidden=false;toastTimer=seconds;}
+/* on touch screens, key names in messages become the on-screen button names */
+function keyWords(t){if(!touchUI.on)return t;return t.replace(/\bZ chains/g,'B chains').replace(/press Z\b/g,'press B').replace(/\bX draws/g,'R draws').replace(/\bC dodges/g,'L dodges').replace(/\(C\)/g,'(L)').replace(/\b([Pp])ress E\b/g,'$1ress USE').replace(/hold ↓/g,'hold ▼ on the D-pad');}
+function toast(text,seconds=2.8){text=keyWords(text);$('toast').textContent=text;$('toast').hidden=false;toastTimer=seconds;}
 function updateHUD(){if(!player)return;$('rangerName').textContent=ranger.name.toUpperCase();$('health').firstElementChild.style.width=player.hp*10+'%';$('health').setAttribute('aria-valuenow',player.hp);$('energy').textContent='BLASTER '+Math.floor(player.energy)+'/6';const count=world.cells.filter(c=>c.taken).length;const extra=world.lock?'LOCKDOWN · wave '+Math.max(1,world.lock.wave+1)+'/'+world.lock.waves.length:world.style==='puzzle'?puzzleObjective():null;$('objective').textContent=world.boss?(world.shieldActive&&!world.shieldUnlocked?'PHAGE SHIELD · Left station [E]':'PHAGE · Final encounter'):ranger.zones[zone]+' · '+(world.terminal.done?'Reach the exit':extra&&count<3?extra+' · '+CARGO[ranger.id][zone]+' '+count+'/3':count<3?CARGO[ranger.id][zone]+' '+count+'/3':'Activate station [E]');}
 function burst(x,y,color,count=12){for(let i=0;i<count;i++){const a=Math.random()*Math.PI*2,s=30+Math.random()*120;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-40,life:.25+Math.random()*.25,max:.5,color});}}
 function attack(kind){if(player.dodge>0||player.inv>.68)return;if(player.action){if(kind==='melee')player.queue=true;return;}if(kind==='shoot'&&player.energy<1){toast('Blaster recharging — melee restores energy');return;}
@@ -203,7 +205,7 @@ function complete(correct){
  if(!profile.results.some(r=>r.runId===run.id))profile.results.push({...result,runId:run.id});profile.checkpoint=null;save();mode='complete';
  showModal('MISSION COMPLETE',ranger.name+' Ranger restored the route',ranger.tasks.map(t=>t[4]).join(' '),[['Choose next Ranger',goHome],['Export results',exportResults],['Replay mission',()=>startMission()]]);
 }
-function goHome(){mode='select';keys.clear();taps.clear();$('screen').hidden=true;$('controls').hidden=true;$('mobile').hidden=true;$('pause').hidden=true;$('missionSelect').hidden=false;buildRoster();selectRanger(selected);}
+function goHome(){mode='select';keys.clear();taps.clear();$('screen').hidden=true;$('controls').hidden=true;$('mobile').hidden=true;document.body?.classList?.remove('playing');$('pause').hidden=true;$('missionSelect').hidden=false;buildRoster();selectRanger(selected);}
 function exportResults(){
  const rows=[['Student','Ranger','Mission','Completed','Seconds','Score','Retries','Question','Answer','Correct']];for(const result of profile.results){for(const answer of result.answers)rows.push([result.name,RANGERS.find(r=>r.id===result.ranger)?.name||result.ranger,result.mission,result.date,result.seconds,result.score,result.retries,answer.question,answer.answer,answer.correct?'Yes':'No']);}
  const quote=v=>'"'+String(v).replace(/^[=+@-]/,"'$&").replaceAll('"','""')+'"';const blob=new Blob(['\ufeff'+rows.map(r=>r.map(quote).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='Organelle-Rangers-results.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -382,7 +384,7 @@ function drawShowcase(dt){
  const bob=frame===0?Math.round(Math.sin(showcaseClock*3)*2):0;
  g.imageSmoothingEnabled=false;g.drawImage(atlases[ranger.id][frame],-10,-4+bob+(frame?0:0),320,280);
 }
-function tick(now){const dt=Math.min((now-last)/1000,.06);last=now;if(mode==='title')drawTitle(dt);else if(mode==='select'&&!$('missionSelect').hidden)drawShowcase(dt);if(mode==='dialog')typeStep(dt);if(mode==='play'){accumulator+=dt;while(accumulator>=1/60&&mode==='play'){step(1/60);taps.clear();accumulator-=1/60;}}else{accumulator=0;taps.clear();}draw();requestAnimationFrame(tick);}
+let shownMode='';function tick(now){if(mode!==shownMode&&document.body?.dataset){shownMode=mode;document.body.dataset.mode=mode;}const dt=Math.min((now-last)/1000,.06);last=now;if(mode==='title')drawTitle(dt);else if(mode==='select'&&!$('missionSelect').hidden)drawShowcase(dt);if(mode==='dialog')typeStep(dt);if(mode==='play'){accumulator+=dt;while(accumulator>=1/60&&mode==='play'){step(1/60);taps.clear();accumulator-=1/60;}}else{accumulator=0;taps.clear();}draw();requestAnimationFrame(tick);}
 function keyDown(code){if(!keys.has(code))taps.add(code);keys.add(code);}
 addEventListener('keydown',e=>{if(e.target instanceof HTMLInputElement)return;
  if(mode==='title'&&(e.code==='Enter'||e.code==='Space')){e.preventDefault();if(!e.repeat)leaveTitle();return;}
@@ -391,6 +393,25 @@ addEventListener('keydown',e=>{if(e.target instanceof HTMLInputElement)return;
  if((mode==='task'||mode==='quiz')&&activeQuestion){const n=/^(Digit|Numpad)([1-4])$/.exec(e.code);if(n&&!activeQuestion.solved){e.preventDefault();$('answers').children[+n[2]-1]?.click();return;}}
  if(mode!=='play')return;if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space','KeyA','KeyD','KeyS','KeyZ','KeyX','KeyC','KeyE'].includes(e.code)){e.preventDefault();keyDown(e.code);}});
 addEventListener('keyup',e=>keys.delete(e.code));addEventListener('blur',()=>{keys.clear();taps.clear();if(mode==='play')pause();});document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='play')pause();});
-for(const button of document.querySelectorAll('[data-key]')){button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture(e.pointerId);keyDown(button.dataset.key);});for(const name of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(name,()=>keys.delete(button.dataset.key));}
+for(const button of document.querySelectorAll('[data-key]')){button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture(e.pointerId);button.classList.add('on');if(button.dataset.key==='Space'&&mode==='dialog'){nextLine();return;}keyDown(button.dataset.key);});for(const name of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(name,()=>{button.classList.remove('on');keys.delete(button.dataset.key);});}
+/* ---- GBA-style touch controls ----
+   The pad appears on phones and tablets (and as soon as anyone touches the screen); a real key press
+   hands the screen back to the keyboard hints. The D-pad reads the thumb's angle, so diagonals work
+   (down + B in the air is the dive kick; up jumps, like A). */
+var touchUI={on:false};
+function setTouch(on){if(touchUI.on===on)return;touchUI.on=on;document.body?.classList?.toggle('touch',on);}
+setTouch(typeof matchMedia==='function'&&matchMedia('(hover: none) and (pointer: coarse)').matches);
+addEventListener('pointerdown',e=>{if(e.pointerType==='touch')setTouch(true);},true);
+addEventListener('keydown',e=>{if(e.isTrusted&&!e.repeat&&e.key&&e.key.length>0)setTouch(false);},true);
+(function(){const pad=$('dpad');if(!pad||!pad.querySelector)return;const dirs={ArrowUp:pad.querySelector('.du'),ArrowDown:pad.querySelector('.dd'),ArrowLeft:pad.querySelector('.dl'),ArrowRight:pad.querySelector('.dr')};let held=new Set(),id=null;
+ function set(next){for(const k of held)if(!next.has(k)){keys.delete(k);dirs[k].classList.remove('on');}for(const k of next)if(!held.has(k)){keyDown(k);dirs[k].classList.add('on');}held=next;}
+ function read(e){const r=pad.getBoundingClientRect(),x=e.clientX-(r.left+r.width/2),y=e.clientY-(r.top+r.height/2),next=new Set();if(Math.hypot(x,y)<r.width*.12)return set(next);
+  const a=Math.atan2(y,x)*180/Math.PI; // 8 directions, 45 degrees each
+  if(a>-157.5&&a<-22.5)next.add('ArrowUp');if(a>22.5&&a<157.5)next.add('ArrowDown');if(a>112.5||a<-112.5)next.add('ArrowLeft');if(a>-67.5&&a<67.5)next.add('ArrowRight');set(next);}
+ pad.addEventListener('pointerdown',e=>{e.preventDefault();id=e.pointerId;pad.setPointerCapture(id);read(e);});
+ pad.addEventListener('pointermove',e=>{if(e.pointerId===id)read(e);});
+ for(const n of ['pointerup','pointercancel','lostpointercapture'])pad.addEventListener(n,e=>{if(e.pointerId===id){id=null;set(new Set());}});
+ $('padStart').addEventListener('pointerdown',e=>{e.preventDefault();if(mode==='play')pause();else if(mode==='pause'&&!$('overlay').hidden){$('overlay').hidden=true;mode='play';}});
+})();
 $('next').onclick=nextLine;$('startBtn').onclick=leaveTitle;$('howBtn').onclick=()=>{$('howPanel').hidden=!$('howPanel').hidden;};$('toTitle').onclick=showTitle;$('pause').onclick=pause;$('launch').onclick=()=>startMission();$('resume').onclick=()=>startMission(true);$('export').onclick=exportResults;$('student').onchange=()=>{profile.name=$('student').value.trim();save();};$('sound').onclick=()=>{muted=!muted;$('sound').textContent=muted?'Sound off':'Sound on';};
 load().catch(error=>{$('loading').textContent='Artwork could not load. Reopen the downloaded HTML file to try again.';console.error(error);});

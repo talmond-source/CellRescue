@@ -8,6 +8,8 @@ Open `index.html` in a modern browser. Artwork, scripts and styles are embedded 
 
 Use arrow keys to move and jump, or Space to jump. Z chains melee attacks; in the air, hold ↓ and press Z for a dive kick. X fires the blaster, C dodges and E activates a nearby mission station. Enter advances dialogue (the first press finishes the line), number keys 1–3 answer bio-scan questions and Escape pauses. In puzzle rooms, punches and kicks hit switches and E picks up or delivers molecules.
 
+**Phones and tablets:** GBA-style touch controls appear automatically. D-pad to move (up jumps; hold down and press B in the air for a dive kick), A jump, B attack, R blaster, L dodge, SELECT = USE (mission stations), START pause. Held upright, the controls sit under the game like a Game Boy Advance; turned sideways, the game sits in the middle with the controls on either side. Using a keyboard switches the hints back to keys.
+
 ## Publish on GitHub Pages
 
 1. Upload the contents of this package into the intended repository. Keep `index.html` at the publishing root.

@@ -64,16 +64,16 @@ evaluate("selected=0;ranger=RANGERS[0];startMission();while(mode==='dialog')next
 evaluate("player.x=world.gaps.filter(g=>g[1]-g[0]<150)[0][0]-160");
 for(let n=0;n<400&&evaluate('player.x<pit[1]+20&&mode==="play"');n++)evaluate("if(player.ground&&world.gaps.some(g=>g[0]-player.x>0&&g[0]-player.x<14))taps.add('Space');step(1/60);taps.clear()");
 check(evaluate('player.x>pit[1] && player.y<=302 && player.hp===10'),'Widest jumpable pit can be crossed');checks++;
-evaluate("keys.clear();player.hp=1;player.inv=0;damagePlayer(1,player.x+20)");check(evaluate('mode')==='lost','Death enters checkpoint retry');checks++;
-evaluate("$('modalActions').children[0].onclick();while(mode==='dialog')nextLine()");check(evaluate('player.hp===10 && mode==="play"'),'Retry restores playable state');checks++;
+evaluate("keys.clear();player.inv=0;for(let n=0;n<30;n++){player.inv=0;damagePlayer(2,player.x+20);}");check(evaluate('mode==="play" && player.hp===10'),'Rangers are invincible: hits never cost health or end the run');checks++;
+check(evaluate('player.inv>0'),'A hit still registers (flash and knockback)');checks++;
 // Dive kick: tuck, dive, hit an enemy below and bounce; or land and send out a shockwave.
-evaluate("selected=1;ranger=RANGERS[1];startMission();while(mode==='dialog')nextLine();enemies=[makeEnemy(player.x+75,2)];enemies[0].timer=9;var dhp=enemies[0].hp;player.y=FLOOR-120;player.ground=false;player.vy=0;keys.add('ArrowDown');taps.add('KeyZ');step(1/60);taps.clear();keys.clear();");
-check(evaluate("player.action.kind")==='dive','Down + Z in the air starts a dive kick');checks++;
+evaluate("selected=1;ranger=RANGERS[1];startMission();while(mode==='dialog')nextLine();enemies=[makeEnemy(player.x+75,2)];enemies[0].timer=9;var dhp=enemies[0].hp;player.y=FLOOR-120;player.ground=false;player.vy=0;taps.add('KeyZ');step(1/60);taps.clear();keys.clear();");
+check(evaluate("player.action.kind")==='dive','Attack in the air starts a dive kick (no Down needed)');checks++;
 check(evaluate("frameForPlayer()")===11,'Dive starts with a tuck');checks++;
 evaluate("for(let n=0;n<10;n++){step(1/60);taps.clear();}");check(evaluate("player.action?.kind==='dive' && frameForPlayer()===9 && player.vy>0"),'Dive kick pose plunges downward');checks++;
 evaluate("for(let n=0;n<40&&enemies[0].hp===dhp;n++){hitStop=0;step(1/60);taps.clear();}");
 check(evaluate("enemies[0].hp===dhp-5"),'Dive kick lands a 5-damage hit');checks++;check(evaluate("player.vy<0 && !player.action"),'Dive kick bounces off the enemy');checks++;
-evaluate("hitStop=0;enemies=[];player.y=FLOOR-120;player.ground=false;player.vy=0;player.action=null;keys.add('ArrowDown');taps.add('KeyZ');step(1/60);taps.clear();keys.clear();for(let n=0;n<60&&player.action?.kind==='dive';n++){hitStop=0;step(1/60);taps.clear();}");
+evaluate("hitStop=0;enemies=[];player.y=FLOOR-120;player.ground=false;player.vy=0;player.action=null;taps.add('KeyZ');step(1/60);taps.clear();keys.clear();for(let n=0;n<60&&player.action?.kind==='dive';n++){hitStop=0;step(1/60);taps.clear();}");
 check(evaluate("player.action?.kind==='land' && rings.length===1 && player.y===FLOOR"),'Missed dive lands with a shockwave');checks++;
 evaluate("for(let n=0;n<20;n++){step(1/60);taps.clear();}");check(evaluate("!player.action && frameForPlayer()===0"),'Landing recovers to idle');checks++;
 evaluate("taps.add('KeyZ');step(1/60);taps.clear();");check(evaluate("player.action.kind")==='punch','Z on the ground is still a punch');checks++;
@@ -147,7 +147,7 @@ check(evaluate("enemies.length===2 && enemies.every(e=>e.child&&e.scale<1)"),'Mu
 evaluate("enemies=[makeEnemy(player.x+40,0)];damageEnemy(enemies[0],enemies[0].hp);");check(evaluate("enemies.length===1"),'A killing blow stops the split');checks++;
 evaluate("ranger=RANGERS.find(r=>r.id==='dna');selected=RANGERS.indexOf(ranger);startMission();loadZone(1);while(mode==='dialog')nextLine();player.inv=0;player.hp=10;var rv=makeEnemy(player.x+30,0);rv.state='active';rv.attack='claw';rv.timer=.2;rv.face=-1;enemies=[rv];step(1/60);");
 check(evaluate("rv.latched && player.latch===rv"),'Retroviruses latch on');checks++;
-evaluate("for(let n=0;n<200;n++){step(1/60);taps.clear();}");check(evaluate("player.hp<9"),'A latched retrovirus drains health');checks++;
+evaluate("for(let n=0;n<200;n++){step(1/60);taps.clear();}");check(evaluate("player.hp===10 && mode==='play'"),'A latched retrovirus clings on but cannot hurt an invincible Ranger');checks++;
 evaluate("taps.add('KeyC');step(1/60);taps.clear();");check(evaluate("!rv.latched && !player.latch"),'Dodging shakes the retrovirus off');checks++;
 evaluate("ranger=RANGERS.find(r=>r.id==='golgi');selected=RANGERS.indexOf(ranger);startMission();loadZone(1);while(mode==='dialog')nextLine();player.x=100;var c1=makeEnemy(900,0),c2=makeEnemy(915,0);enemies=[c1,c2];var both=c1.hp+c2.hp;for(let n=0;n<120;n++)updateEnemy(c1,1/60);");
 check(evaluate("c1.merged && c1.hp===both && c2.removed"),'Misfolded proteins clump together');checks++;

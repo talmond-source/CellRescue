@@ -131,13 +131,13 @@ function loadZone(index){
   puzzle:'Three gates are sealed with biology locks. Solve each one to free a '+molecule+' molecule.'}[world.style];
  const lines=[['crispr',intro],[ranger.id,world.boss?'At half strength he will raise a shield. I’ll use the control station on the left to disable it, then finish the fight.':styleLine]];
  if(world.style==='puzzle')lines.push([ranger.id,world.rooms[0].cfg.line.replace(/\.$/,'')+'. '+(world.rooms[0].kind==='carry'?'E picks things up and uses machines.':world.rooms[0].kind==='sequence'?'I hit the switches with punches, kicks or dive kicks.':'I hit the switches with punches or kicks.')]);
- if(zone===0)lines.push(['crispr','Z chains two punches into a kick. In the air, hold ↓ and press Z for a dive kick. X draws your blaster and C dodges. Press E at the station when you have all three molecules.']);
+ if(zone===0)lines.push(['crispr','Z chains two punches into a kick. Press Z in the air to slam down with a dive kick. X draws your blaster and C dodges. Press E at the station when you have all three molecules.']);
  if(zone===0&&!world.boss)lines.push(['crispr',FAMILY[ENEMY_FAMILY[ranger.id]].tip]);
  talk(lines,()=>mode='play');updateHUD();
 }
 function makeEnemy(x,type){const family=type===3?'phage':ENEMY_FAMILY[ranger.id]||'bacteria',info=FAMILY[family],hp=type===3?70:Math.max(3,5+type*2+(info?.hp||0));return {x,y:FLOOR,home:x,type,family,hp,max:hp,face:-1,state:'approach',timer:.4+(x%5)*.1,clock:0,hurt:0,dead:0,attackCount:0,hit:false,walk:0,scale:1,drop:0,lift:0};}
 /* on touch screens, key names in messages become the on-screen button names */
-function keyWords(t){if(!touchUI.on)return t;return t.replace(/\bZ chains/g,'B chains').replace(/press Z\b/g,'press B').replace(/\bX draws/g,'R draws').replace(/\bC dodges/g,'L dodges').replace(/\(C\)/g,'(L)').replace(/\b([Pp])ress E\b/g,'$1ress USE').replace(/hold ↓/g,'hold ▼ on the D-pad');}
+function keyWords(t){if(!touchUI.on)return t;return t.replace(/\bZ chains/g,'B chains').replace(/([Pp])ress Z\b/g,'$1ress B').replace(/\bX draws/g,'X draws').replace(/\bC dodges/g,'L dodges').replace(/\(C\)/g,'(L)').replace(/\b([Pp])ress E\b/g,'$1ress USE');}
 function toast(text,seconds=2.8){text=keyWords(text);$('toast').textContent=text;$('toast').hidden=false;toastTimer=seconds;}
 function updateHUD(){if(!player)return;$('rangerName').textContent=ranger.name.toUpperCase();$('health').firstElementChild.style.width=player.hp*10+'%';$('health').setAttribute('aria-valuenow',player.hp);$('energy').textContent='BLASTER '+Math.floor(player.energy)+'/6';const count=world.cells.filter(c=>c.taken).length;const extra=world.lock?'LOCKDOWN · wave '+Math.max(1,world.lock.wave+1)+'/'+world.lock.waves.length:world.style==='puzzle'?puzzleObjective():null;$('objective').textContent=world.boss?(world.shieldActive&&!world.shieldUnlocked?'PHAGE SHIELD · Left station [E]':'PHAGE · Final encounter'):ranger.zones[zone]+' · '+(world.terminal.done?'Reach the exit':extra&&count<3?extra+' · '+CARGO[ranger.id][zone]+' '+count+'/3':count<3?CARGO[ranger.id][zone]+' '+count+'/3':'Activate station [E]');}
 function burst(x,y,color,count=12){for(let i=0;i<count;i++){const a=Math.random()*Math.PI*2,s=30+Math.random()*120;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-40,life:.25+Math.random()*.25,max:.5,color});}}
@@ -145,7 +145,7 @@ function attack(kind){if(player.dodge>0||player.inv>.68)return;if(player.action)
  if(kind==='melee'){player.combo=player.chain>0?player.combo%3+1:1;player.action={kind:player.combo===3?'kick':'punch',time:0,duration:player.combo===3?.5:.34,hit:false};player.queue=false;}
  else{player.action={kind:'shoot',time:0,duration:.48,hit:false};player.energy-=1;updateHUD();}
 }
-/* Dive kick: in the air, hold Down and press Z. A short tuck, then a steep diagonal kick.
+/* Dive kick: press Z (attack) in the air. A short tuck, then a steep diagonal kick.
    Hitting an enemy bounces the Ranger back up; hitting the floor sends out a small shockwave. */
 const DIVE_TUCK=.12;let ghosts=[],rings=[];
 function diveKick(){const p=player;if(p.action||p.dodge>0||p.inv>.68)return;p.action={kind:'dive',time:0,duration:Infinity,hit:false};p.queue=false;tone(300,.08,'triangle');}
@@ -181,7 +181,7 @@ function damageEnemy(e,amount,knock=14){
  e.hp=Math.max(0,e.hp-amount);e.hurt=.16;if(e.latched)releaseLatch(e);
  if(e.family==='mutant'&&!e.child&&e.hp>0&&e.hp<=e.max/2)splitMutant(e);if(e.type!==3){enemyStep(e,e.x+player.face*knock);e.state='recover';e.timer=.3;}
  burst(e.x,e.y-(e.type===3?55:27),'#d0fff0',e.hp?10:24);hitStop=.045;shake=e.type===3?3:2;comboCount++;comboTimer=1.6;run.score+=amount*10;tone(e.hp?120:75,.09,'sawtooth');
-  if(e.hp===0){e.dead=.5;if(e.type!==3&&!e.removed)pickups.push({x:e.x,y:FLOOR-20,kind:Math.random()<.4?'health':'energy',life:16});else{world.cleared=true;bolts=[];toast('Phage defeated — the cell is recovering');}}
+  if(e.hp===0){e.dead=.5;if(e.type!==3&&!e.removed)pickups.push({x:e.x,y:FLOOR-20,kind:'energy',life:16});else{world.cleared=true;bolts=[];toast('Phage defeated — the cell is recovering');}}
 }
 function splitMutant(e){
  e.child=true;e.max=Math.ceil(e.max/2);e.hp=Math.min(e.hp,e.max);e.scale=.74;
@@ -189,7 +189,7 @@ function splitMutant(e){
  burst(e.x,e.y-20,'#c58cff',16);if(!world.splitTold){world.splitTold=true;toast('The mutated cell divided — finish them fast!');}
 }
 function releaseLatch(e){e.latched=false;if(player.latch===e)player.latch=null;e.x=clamp(e.x-player.face*44,35,world.length-35);e.y=FLOOR;e.state='recover';e.timer=.9;e.hurt=.25;burst(player.x,player.y-30,'#a8ffd9',10);}
-function damagePlayer(amount,sourceX){if(player.inv>0||player.dodge>0||mode!=='play')return;player.hp=Math.max(0,player.hp-amount);player.inv=.85;player.action=null;player.queue=false;player.vx=(player.x<sourceX?-1:1)*110;shake=4;burst(player.x,player.y-35,'#ff7999');tone(90,.12,'sawtooth');updateHUD();if(!player.hp){mode='lost';run.retries++;showModal('CHECKPOINT','Regroup and try again','Your mission progress through earlier zones is saved.',[['Retry this zone',()=>loadZone(zone)],['Choose a Ranger',goHome]]);}}
+function damagePlayer(amount,sourceX){if(player.inv>0||player.dodge>0||mode!=='play')return;/* Rangers are invincible: learning, not reflexes, decides the mission. A hit still flashes and pushes back. */player.inv=.85;player.action=null;player.queue=false;player.vx=(player.x<sourceX?-1:1)*110;shake=4;burst(player.x,player.y-35,'#ff7999');tone(90,.12,'sawtooth');updateHUD();}
 function terminal(){
  if(world.terminal.done||Math.abs(player.x-world.terminal.x)>70){if(world.style==='puzzle'&&!world.boss)carryInteract();return;}
  if(world.boss){
@@ -221,7 +221,7 @@ function step(dt){
  if(p.ground)p.coyote=.1;
  if(taps.has('ArrowUp')||taps.has('Space'))p.jumpBuffer=.12;
  if(p.jumpBuffer&&p.coyote){p.vy=-420;p.ground=false;p.coyote=0;p.jumpBuffer=0;tone(360,.09,'triangle');}
- if(taps.has('KeyZ')){if(!p.ground&&(keys.has('ArrowDown')||keys.has('KeyS')))diveKick();else attack('melee');}if(taps.has('KeyX'))attack('shoot');
+ if(taps.has('KeyZ')){if(!p.ground)diveKick();else attack('melee');}if(taps.has('KeyX'))attack('shoot');
  if(taps.has('KeyC')&&!p.dodgeCool&&!p.action){if(p.latch)releaseLatch(p.latch);p.dodge=.24;p.dodgeCool=.8;burst(p.x,p.y-10,'#8effeb',5);tone(260,.08,'triangle');}
  if(taps.has('KeyE'))terminal();if(mode!=='play')return;
  const direction=Number(keys.has('ArrowRight')||keys.has('KeyD'))-Number(keys.has('ArrowLeft')||keys.has('KeyA'));
@@ -397,7 +397,7 @@ for(const button of document.querySelectorAll('[data-key]')){button.addEventList
 /* ---- GBA-style touch controls ----
    The pad appears on phones and tablets (and as soon as anyone touches the screen); a real key press
    hands the screen back to the keyboard hints. The D-pad reads the thumb's angle, so diagonals work
-   (down + B in the air is the dive kick; up jumps, like A). */
+   (B in the air is the dive kick; up jumps, like A). */
 var touchUI={on:false};
 function setTouch(on){if(touchUI.on===on)return;touchUI.on=on;document.body?.classList?.toggle('touch',on);}
 setTouch(typeof matchMedia==='function'&&matchMedia('(hover: none) and (pointer: coarse)').matches);

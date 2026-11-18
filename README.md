@@ -6,9 +6,11 @@ An educational pixel-art side-scrolling game for high-school biology, with 14 pl
 
 Open `index.html` in a modern browser. Artwork, scripts and styles are embedded in that single file. Student progress is stored in the browser. Results can be downloaded as CSV. Hosting this file on GitHub Pages supports Chromebook access.
 
-Use arrow keys to move and jump, or Space to jump. Z chains melee attacks; in the air, hold ↓ and press Z for a dive kick. X fires the blaster, C dodges and E activates a nearby mission station. Enter advances dialogue (the first press finishes the line), number keys 1–3 answer bio-scan questions and Escape pauses. In puzzle rooms, punches and kicks hit switches and E picks up or delivers molecules.
+Use arrow keys to move and jump, or Space to jump. Z chains melee attacks; press Z in the air for a dive kick. X fires the blaster, C dodges and E activates a nearby mission station. Enter advances dialogue (the first press finishes the line), number keys 1–3 answer bio-scan questions and Escape pauses. In puzzle rooms, punches and kicks hit switches and E picks up or delivers molecules.
 
-**Phones and tablets:** GBA-style touch controls appear automatically. D-pad to move (up jumps; hold down and press B in the air for a dive kick), A jump, B attack, R blaster, L dodge, SELECT = USE (mission stations), START pause. Held upright, the controls sit under the game like a Game Boy Advance; turned sideways, the game sits in the middle with the controls on either side. Using a keyboard switches the hints back to keys.
+Rangers are invincible: enemies and hazards still knock them back, but nothing costs health or ends a mission, so progress depends on the biology, not on fighting skill.
+
+**Phones and tablets:** GBA-style touch controls appear automatically. D-pad to move (up jumps), A jump, B attack (in the air it is a dive kick), X blaster, L dodge, SELECT = USE (mission stations), START pause. Held upright, the controls sit under the game like a Game Boy Advance; turned sideways, the game sits in the middle with the controls on either side. Using a keyboard switches the hints back to keys.
 
 ## Publish on GitHub Pages
 

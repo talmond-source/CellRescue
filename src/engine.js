@@ -322,8 +322,14 @@ function draw(){
  world.cells.forEach((cell,i)=>{if(cell.taken||cell.hidden)return;const x=cell.x-camera,y=cell.y+Math.sin(clock*3+cell.x)*3;if(x<-40||x>W+40)return;const [name,icon]=MOLECULES[ranger.id][zone];
   ctx.fillStyle='#7cf7df22';ctx.beginPath();ctx.arc(x,y,17,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#9fffea';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(x,y,17+Math.sin(clock*4)*1.5,0,Math.PI*2);ctx.stroke();
   ctx.save();ctx.imageSmoothingEnabled=true;ctx.drawImage(moleculeIcon(icon,i),Math.round(x-17),Math.round(y-17));ctx.restore();text(name.toUpperCase(),x,y-24,8,'#d4fff1','center');});
- if(world.terminal){const t=world.terminal,x=t.x-camera;rect('#10263f',x-21,FLOOR-52,42,52);rect('#6b91a7',x-23,FLOOR-54,46,4);rect(t.done?'#7ef2bf':'#5dc1df',x-16,FLOOR-46,32,23);rect('#1d4c63',x-13,FLOOR-43,26,16);for(let i=0;i<3;i++)rect(t.done?'#b8ffe0':'#92e8ff',x-10,FLOOR-40+i*5,19-i*3,2);rect('#ffd887',x-6,FLOOR-15,12,4);if(Math.abs(player.x-t.x)<80&&!t.done)text('E · '+(world.boss?'Shield control':MISSION_STYLES[ranger.id][0]),x,FLOOR-65,10,'#fff0b2','center');}
- if(!world.boss){const x=world.length-48-camera;rect('#11273d',x-23,FLOOR-100,46,100);rect(world.terminal.done?'#8bffe2':'#586c87',x-20,FLOOR-97,40,3);rect('#46798b',x-20,FLOOR-94,3,94);rect('#46798b',x+17,FLOOR-94,3,94);rect(world.terminal.done?'#78edce55':'#ff819833',x-16,FLOOR-90,32,90);text('EXIT',x,FLOOR-106,10,'#d8ffed','center');}
+ if(world.terminal){const t=world.terminal,x=t.x-camera,have=world.cells.filter(c=>c.taken).length,ready=!t.done&&(world.boss?world.shieldActive:have>=3),near=Math.abs(player.x-t.x)<80;
+  // station screen: red = not ready, flashing amber = ready to use, green = done
+  const scr=t.done?FB.ok:ready?(Math.floor(clock*3)%2?'#ffd36b':'#c98a1e'):FB.bad;
+  rect(t.done?FB.okEdge:ready?'#ffe9a8':FB.badEdge,x-24,FLOOR-55,48,55);rect('#10263f',x-21,FLOOR-52,42,52);rect(scr,x-17,FLOOR-47,34,25);rect('#0b1a2c',x-13,FLOOR-43,26,16);for(let i=0;i<3;i++)rect(t.done?'#b8ffe0':ready?'#fff0b2':'#ffc0cb',x-10,FLOOR-40+i*5,19-i*3,2);rect('#ffd887',x-6,FLOOR-15,12,4);
+  if(t.done)mark(x,FLOOR-70,true,10);
+  else if(ready)text('E · '+(world.boss?'Shield control':MISSION_STYLES[ranger.id][0]),x,FLOOR-65,10,'#fff0b2','center');
+  else if(near||!world.boss)text(world.boss?'SHIELD LOCKED':'NEEDS '+have+'/3',x,FLOOR-65,9,'#ffc0cb','center');}
+ if(!world.boss){const x=world.length-48-camera;rect('#11273d',x-23,FLOOR-100,46,100);rect(world.terminal.done?'#8bffe2':'#586c87',x-20,FLOOR-97,40,3);rect('#46798b',x-20,FLOOR-94,3,94);rect('#46798b',x+17,FLOOR-94,3,94);rect(world.terminal.done?'#78edce55':'#ff819833',x-16,FLOOR-90,32,90);text('EXIT',x,FLOOR-106,10,'#d8ffed','center');text(world.terminal.done?'OPEN →':'LOCKED',x,FLOOR-118,8,world.terminal.done?'#9effc4':'#ffc0cb','center');}
  for(const item of pickups){const x=item.x-camera,y=item.y+Math.sin(clock*5)*2;rect(item.kind==='health'?'#ff9faa':'#8deaff',x-5,y-5,10,10);rect('#fff7e6',x-1,y-3,2,6);if(item.kind==='health')rect('#fff7e6',x-3,y-1,6,2);}
  for(const e of enemies)if((e.hp>0||e.dead>0)&&Math.abs(e.x-camera-W/2)<W/2+140){ctx.fillStyle='#08132488';ctx.beginPath();ctx.ellipse(e.x-camera,(e.lift||e.y<FLOOR-4?FLOOR:e.y)+2,(e.type===3?30:23)*(e.scale||1),5,0,0,7);ctx.fill();if(e.drop<0){ctx.globalAlpha=.6;rect('#ff5d8f',e.x-camera-1,0,2,e.y-20);ctx.globalAlpha=1;}drawSprite(e.type===3?'phage':e.family,frameForEnemy(e),e.x,e.y,-e.face,e.hp?1:Math.min(1,e.dead*3),0,e.scale||1);if(e.latched)text('LATCHED',e.x-camera,e.y-62,8,'#a8ffd9','center');
  if(e.type===3&&world.shieldActive&&!world.shieldUnlocked){ctx.strokeStyle='#75e7ff';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(e.x-camera,e.y-55,50,63,0,0,Math.PI*2);ctx.stroke();}
@@ -334,6 +340,7 @@ function draw(){
  if(player.carry){ctx.save();ctx.imageSmoothingEnabled=true;ctx.drawImage(moleculeIcon(player.carry.key),Math.round(player.x-camera-17),Math.round(player.y-112+Math.sin(clock*6)*2));ctx.restore();}
  for(const b of bolts){const x=b.x-camera;rect(b.enemy?'#ee6fb7':'#48cde8',x-Math.sign(b.vx)*17,b.y-3,18,6);rect(b.enemy?'#ffd0ec':'#e1ffff',x-Math.sign(b.vx)*12,b.y-1,14,2);}
  for(const p of particles){ctx.globalAlpha=clamp(p.life/p.max,0,1);rect(p.color,p.x-camera,p.y,3,3);}ctx.globalAlpha=1;
+ drawStamps();
  if(comboCount>1)text(comboCount+' HIT',W-18,86,15,'#ffe1a1','right');
  if(world.boss){const boss=enemies[0];rect('#10172a',150,H-29,340,15);rect('#b63d73',154,H-25,332*boss.hp/boss.max,7);text('PHAGE',W/2,H-34,10,'#ffc0d8','center');}
  ctx.restore();

@@ -74,7 +74,7 @@ function answerQuestion(button,original){
 function closeQuestion(){activeQuestion=null;$('overlay').hidden=true;$('panel').classList.toggle('scan',false);$('overlay').classList.toggle('full',false);mode='play';canvas.focus();}
 function openMissionPuzzle(boss=false){
  askQuestion(boss?3:zone,()=>{
-  world.terminal.done=true;if(boss)world.shieldUnlocked=true;
+  world.terminal.done=true;if(boss)world.shieldUnlocked=true;stamp(world.terminal.x,boss?'SHIELD DOWN':'STATION COMPLETE · EXIT OPEN');
   player.hp=Math.min(10,player.hp+3);player.energy=6;closeQuestion();updateHUD();
  });
 }

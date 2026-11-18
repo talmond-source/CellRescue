@@ -84,11 +84,78 @@ button.answer.bad{opacity:.55;text-decoration:line-through}button.answer.good{op
 .feedback.hit{background:#163f37;border-color:#91f6c5;color:#e3fff4}
 button.ghost{background:transparent;border-color:#3f6378;color:#a6bdd0;font-size:13px;padding:6px 12px}
 @media(max-width:700px){.panel.scan{padding:10px}.answers{grid-template-columns:1fr}#titleMenu{top:50%;gap:6px}#startBtn{padding:10px 14px}#titleMenu .sub{display:none}#howPanel{inset:auto 3% 3% 3%;font-size:11px}}
+
+/* ---------- Ranger select: arcade player-select screen ---------- */
+#missionSelect{--rc:#ff5a7a;position:relative;isolation:isolate;padding:14px 18px 18px;margin-top:4px;border:1px solid #3d5a78;border-radius:12px;overflow:hidden;box-shadow:0 16px 60px #0008}
+#missionSelect .selBg{position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,#050a1ceb,#0a1530c4 45%,#050a1cf0),var(--selbg) center/cover;image-rendering:pixelated;animation:selPan 80s linear infinite alternate}
+#missionSelect .selBg::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,#0000 0 2px,#0004 2px 3px);pointer-events:none}
+@keyframes selPan{from{background-position:center,0% 50%}to{background-position:center,100% 50%}}
+.selTop{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin-bottom:12px}
+.selTitle{margin:0;font:clamp(14px,2.4vw,26px)/1.1 "Press Start 2P",monospace;letter-spacing:.04em;text-align:center;background:linear-gradient(#fff6c8 0 30%,#ffd23f 30% 60%,#ff8a2b 60%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(3px 3px 0 #3a0f2e) drop-shadow(0 0 10px #ff8a2b55)}
+.selBack{justify-self:start;font:10px "Press Start 2P",monospace;background:#0b1730cc;border:2px solid #4f6d92;color:#b9cdf0;padding:8px 10px;border-radius:6px}
+.selCount{justify-self:end;font:9px/1.4 "Press Start 2P",monospace;color:#9ff5dd;text-align:right}
+#missionSelect #selection{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:18px;align-items:center;background:none;border:0;padding:0;min-height:0}
+.stage{position:relative;display:grid;place-items:center}
+.stage::before{content:"";position:absolute;inset:4% 12% 0;border-radius:50%;background:radial-gradient(closest-side,color-mix(in srgb,var(--rc) 45%,#0000),#0000);filter:blur(6px)}
+#missionSelect #selectedArt{position:relative;width:100%;max-width:380px;height:auto;aspect-ratio:300/280;image-rendering:pixelated}
+.dossier{min-width:0}
+.selRole{display:inline-block;font:9px "Press Start 2P",monospace;letter-spacing:.06em;color:#120a1e;background:var(--rc);padding:7px 14px 7px 10px;clip-path:polygon(0 0,100% 0,calc(100% - 8px) 50%,100% 100%,0 100%);margin-bottom:10px}
+#missionSelect #selectedName{margin:0 0 12px;font:clamp(18px,3vw,34px)/1.15 "Press Start 2P",monospace;color:#fff;text-shadow:3px 3px 0 #10081c,-1px -1px 0 #10081c,1px -1px 0 #10081c,-1px 1px 0 #10081c,0 0 18px color-mix(in srgb,var(--rc) 70%,#0000);text-wrap:balance}
+.brief{position:relative;background:#081226d9;border:2px solid #2f4a6d;border-left:4px solid var(--rc);border-radius:4px 10px 10px 4px;padding:16px 14px 12px;margin-bottom:14px}
+.brief .tag{position:absolute;top:-9px;left:10px;font:8px "Press Start 2P",monospace;background:#ffd23f;color:#2a1305;padding:4px 7px;border-radius:3px}
+.brief p{margin:0 0 10px;font-size:15px;line-height:1.5;color:#dbe8ff}
+.route{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px;counter-reset:z}
+.route li{counter-increment:z;font:600 12px/1.2 system-ui,sans-serif;color:#bfe9ff;background:#0f2442;border:1px solid #2f5a7d;border-radius:999px;padding:5px 10px 5px 6px;display:flex;align-items:center;gap:6px}
+.route li::before{content:counter(z);font:8px "Press Start 2P",monospace;width:18px;height:18px;display:grid;place-items:center;border-radius:50%;background:var(--rc);color:#120a1e}
+.route li+li{position:relative}
+.selGo{display:flex;flex-wrap:wrap;gap:10px}
+#missionSelect #launch{font:13px "Press Start 2P",monospace;color:#3a1500;background:linear-gradient(#ffe680,#ffc53a);border:3px solid #fff3c4;outline:3px solid #7a3d00;border-radius:6px;padding:14px 20px;box-shadow:0 5px 0 #7a3d00;animation:selPulse 1.4s ease-in-out infinite}
+#missionSelect #launch:active{translate:0 3px;box-shadow:0 2px 0 #7a3d00}
+@keyframes selPulse{50%{filter:brightness(1.12) drop-shadow(0 0 8px #ffd23f99)}}
+#missionSelect #resume{font:10px "Press Start 2P",monospace;background:#0b1730;border:2px solid #7cf7df;color:#9ff5dd;border-radius:6px;padding:12px 14px}
+#missionSelect #roster{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin:18px 0 14px}
+#missionSelect .ranger{position:relative;padding:0;min-height:0;aspect-ratio:1/.9;border:3px solid color-mix(in srgb,var(--color) 55%,#0b1222);border-radius:6px;background:radial-gradient(120% 90% at 50% 25%,color-mix(in srgb,var(--color) 38%,#0b1222),#070d1c 75%);overflow:hidden;text-align:center;transition:transform .12s,border-color .12s,filter .12s;filter:saturate(.8) brightness(.85)}
+#missionSelect .ranger canvas{position:absolute;inset:0 0 18% 0;width:100%;height:82%;object-fit:cover;object-position:50% 0;image-rendering:auto}
+#missionSelect .ranger strong{position:absolute;left:0;right:0;bottom:0;font:clamp(6px,.75vw,9px)/1 "Press Start 2P",monospace;color:#fff;background:#060b18e6;padding:6px 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:2px solid var(--color)}
+#missionSelect .ranger small,#missionSelect .ranger .short{display:none}
+#missionSelect .ranger:hover,#missionSelect .ranger:focus-visible{filter:none;border-color:var(--color)}
+#missionSelect .ranger.selected{filter:none;border-color:#ffd23f;transform:translateY(-4px);box-shadow:0 0 0 2px #120a1e,0 0 18px #ffd23f88}
+#missionSelect .ranger.selected::after{content:"1P";position:absolute;top:4px;left:4px;font:8px "Press Start 2P",monospace;color:#2a1305;background:#ffd23f;padding:3px 4px;border-radius:2px;animation:selBlink 1s steps(2) infinite}
+@keyframes selBlink{50%{opacity:.25}}
+#missionSelect .ranger .star{position:absolute;top:4px;right:4px;font:9px "Press Start 2P",monospace;color:#7cf7df;text-shadow:1px 1px 0 #000}
+.selFoot{display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:#081226cc;border:1px solid #2f4a6d;border-radius:8px;padding:8px 10px}
+.selFoot label{display:flex;align-items:center;gap:8px;font:9px "Press Start 2P",monospace;color:#ffd23f;flex:1 1 260px;min-width:0}
+.selFoot input{flex:1;min-width:0;font:600 14px ui-monospace,monospace;background:#030812;border:2px solid #2f4a6d;color:#9ff5dd;border-radius:4px;padding:8px}
+.selFoot input:focus{outline:none;border-color:#ffd23f}
+#missionSelect #saveNote{flex-basis:100%;font-size:11px;color:#8da7c4}
+#missionSelect .info{margin:10px 0 0;font-size:11px;color:#7f97b4}
+@media (max-width:760px){
+ #missionSelect{padding:10px 10px 14px;border-radius:10px}
+ .selTop{grid-template-columns:auto 1fr;margin-bottom:8px}.selTitle{text-align:right;font-size:12px}.selCount{display:none}
+ #missionSelect #selection{grid-template-columns:40% 1fr;gap:8px;align-items:start}
+ #missionSelect #selectedName{font-size:15px;margin-bottom:8px}.selRole{font-size:7px;padding:5px 10px 5px 7px;margin-bottom:6px}
+ .brief{grid-column:1/-1;padding:13px 10px 10px;margin:0}.brief p{font-size:13px}.route li{font-size:11px}
+ .dossier{display:contents}
+ #missionSelect .stage{grid-row:1/3}
+ .selGo{grid-column:1/-1}.selGo button{flex:1}
+ #missionSelect #launch{font-size:11px;padding:12px}
+ #missionSelect #roster{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:14px 0 10px}
+ #missionSelect .ranger{aspect-ratio:1/1.05}#missionSelect .ranger strong{font-size:6px;padding:4px 1px}#missionSelect .ranger .full{display:none}#missionSelect .ranger .short{display:inline}
+}
+@media (max-width:760px){#missionSelect .dossier>.selRole,#missionSelect .dossier>h1{grid-column:2}}
 </style>
 <main><header><strong>ORGANELLE RANGERS</strong><span>CELL RESCUE · ARCADE MISSIONS</span><div class="row"><button id="sound">Sound on</button><button id="pause" hidden>Pause</button></div></header>
 <section id="title" hidden><canvas id="titleArt" width="640" height="360" aria-label="Organelle Rangers: Cell Rescue title screen"></canvas><div id="titleMenu"><button id="startBtn">PRESS START</button><span class="sub">14 RANGERS · 1 CELL · NO TIME TO LOSE</span><button id="howBtn">How to play</button></div><div id="howPanel" hidden><span><b>← →</b> Move</span><span><b>↑ / Space</b> Jump</span><span><b>Z</b> Punch, punch, kick</span><span><b>↓ + Z</b> in the air: Dive kick</span><span><b>X</b> Blaster</span><span><b>C</b> Dodge</span><span><b>E</b> Use a station</span><span><b>Esc</b> Pause</span></div></section>
 <div id="loading">Preparing Ranger artwork… <span id="loadProgress"></span></div>
-<section id="missionSelect" hidden><div class="selectHead"><h2>CHOOSE YOUR RANGER</h2><button id="toTitle" class="ghost">◀ Title screen</button></div><div id="selection"><canvas id="selectedArt" width="300" height="280"></canvas><div><div class="muted" id="selectedRole"></div><h1 id="selectedName"></h1><p id="selectedStory"></p><div class="row"><button class="primary" id="launch">Start mission</button><button id="resume" hidden>Resume checkpoint</button></div></div></div><div class="row"><label>Student name <input id="student" maxlength="60" autocomplete="off" placeholder="Name or class nickname"></label><button id="export">Export results</button></div><div id="saveNote"></div><div id="roster"></div><p class="info">A fictional cell-city adventure. Objectives teach real cell functions. Combat is a story device. Bacteriophages infect bacteria; the Phage villain’s attacks on this organelle city are fictional. The CRISPR mission represents a bacterial defense system.</p></section>
+<section id="missionSelect" hidden><div class="selBg" aria-hidden="true"></div>
+<div class="selTop"><button id="toTitle" class="selBack">◀ TITLE</button><h2 class="selTitle">SELECT YOUR RANGER</h2><span class="selCount" id="selCount"></span></div>
+<div id="selection"><div class="stage"><canvas id="selectedArt" width="300" height="280"></canvas></div>
+<div class="dossier"><div class="selRole" id="selectedRole"></div><h1 id="selectedName"></h1>
+<div class="brief"><span class="tag">MISSION BRIEF</span><p id="selectedStory"></p><ol class="route" id="selRoute" aria-label="Mission zones"></ol></div>
+<div class="selGo"><button class="primary" id="launch">▶ START MISSION</button><button id="resume" hidden>↻ RESUME CHECKPOINT</button></div></div></div>
+<div id="roster" role="group" aria-label="Rangers"></div>
+<div class="selFoot"><label>PLAYER <input id="student" maxlength="60" autocomplete="off" placeholder="Name or class nickname"></label><button id="export" class="ghost">Export results</button><span id="saveNote"></span></div>
+<p class="info">A fictional cell-city adventure. Objectives teach real cell functions. Combat is a story device. Bacteriophages infect bacteria; the Phage villain’s attacks on this organelle city are fictional. The CRISPR mission represents a bacterial defense system.</p></section>
 <section id="screen" hidden><canvas id="game" width="640" height="360" tabindex="0" aria-label="Organelle Rangers arcade game"></canvas><div id="hud"><div><strong id="rangerName"></strong><div id="health" hidden><i></i></div><span id="energy"></span></div><div id="objective"></div></div><div id="toast" hidden></div><section id="speech" hidden><canvas id="portrait" width="72" height="88"></canvas><div id="speechText"><div id="speaker"></div><p id="line"><span id="lineShown"></span><span id="lineRest" aria-hidden="true"></span></p><button id="next">Continue ↵</button></div></section><div id="overlay" class="overlay" hidden><div class="panel" id="panel"><div id="modalTag" class="eyebrow"></div><h2 id="modalTitle"></h2><p id="modalText"></p><div id="choices"></div><div class="row" id="modalActions"></div></div></div></section>
 <div id="controls" hidden><span><kbd>← →</kbd> Move</span><span><kbd>↑ / Space</kbd> Jump</span><span><kbd>Z</kbd> Combo</span><span><kbd>↓</kbd>+<kbd>Z</kbd> Dive kick (in the air)</span><span><kbd>X</kbd> Blaster</span><span><kbd>C</kbd> Dodge</span><span><kbd>E</kbd> Interact</span><span><kbd>Esc</kbd> Pause</span></div><div id="mobile" hidden><div class="gba">
 <button class="sh shL" data-key="KeyC">L<small>DODGE</small></button>

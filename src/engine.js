@@ -85,13 +85,26 @@ async function load(){
  environment=environments.environment;
  $('loading').hidden=true;$('student').value=profile.name;buildRoster();selectRanger(selected);save();showTitle();last=performance.now();requestAnimationFrame(tick);
 }
+/* head-and-shoulders crop of a Ranger's portrait for the select grid (falls back to the idle sprite) */
+const mugs={};
+function mugshot(id){
+ if(mugs[id])return mugs[id];const out=makeCanvas(160,160),g=out.getContext('2d'),src=portraits[id];
+ if(src&&src.getContext){const d=src.getContext('2d').getImageData(0,0,src.width,src.height).data;let top=src.height,xs=0,n=0;
+  for(let y=0;y<src.height&&top===src.height;y++)for(let x=0;x<src.width;x++)if(d[(y*src.width+x)*4+3]>40){top=y;break;}
+  for(let y=top;y<top+18&&y<src.height;y++)for(let x=0;x<src.width;x++)if(d[(y*src.width+x)*4+3]>40){xs+=x;n++;}
+  const cx=n?xs/n:src.width/2,w=74;g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';g.drawImage(src,cx-w/2,top-4,w,w,0,0,160,160);}
+ else{g.imageSmoothingEnabled=false;g.drawImage(atlases[id][0],-16,-6,192,168);}
+ return mugs[id]=out;
+}
 function buildRoster(){
  $('roster').replaceChildren();RANGERS.forEach((r,i)=>{const b=document.createElement('button');b.className='ranger';b.style.setProperty('--color',r.color);b.setAttribute('aria-label','Select '+r.name+' Ranger');
- const art=makeCanvas(150,140),g=art.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(atlases[r.id][0],11,0,128,112);
- const title=document.createElement('strong');title.textContent=r.name;const sub=document.createElement('small');sub.textContent=profile.results.some(v=>v.ranger===r.id)?'Mission cleared ✓':r.role;
- b.append(art,title,sub);b.onclick=()=>selectRanger(i);$('roster').append(b);});
+ const art=mugshot(r.id);
+ const title=document.createElement('strong'),SHORT={'Cell Membrane':'Membrane',Mitochondria:'Mito'};const full=document.createElement('span'),short=document.createElement('span');full.className='full';short.className='short';full.textContent=r.name;short.textContent=SHORT[r.name]||r.name;title.append(full,short);const sub=document.createElement('small');const done=profile.results.some(v=>v.ranger===r.id);sub.textContent=done?'Mission cleared ✓':r.role;
+ b.append(art,title,sub);if(done){const st=document.createElement('span');st.className='star';st.textContent='★';st.setAttribute('aria-label','cleared');b.append(st);}b.onclick=()=>{selectRanger(i);tone(520,.05,'square');};$('roster').append(b);});
 }
-function selectRanger(i){selected=i;showcaseClock=0;ranger=RANGERS[i];$('selectedName').textContent=ranger.name+' Ranger';$('selectedRole').textContent=ranger.role.toUpperCase();$('selectedStory').textContent=ranger.intro+' '+MISSION_STYLES[ranger.id][1];
+function selectRanger(i){selected=i;showcaseClock=0;ranger=RANGERS[i];const ms=$('missionSelect');if(ms.style){ms.style.setProperty('--rc',ranger.color);if(!ms.dataset.bg&&typeof ASSETS!=='undefined'){ms.dataset.bg=1;ms.style.setProperty('--selbg','url('+ASSETS.environment+')');}}
+ const route=$('selRoute');if(route&&route.replaceChildren)route.replaceChildren(...(ranger.zones||[]).map(z=>{const li=document.createElement('li');li.textContent=z;return li;}));
+ const cleared=new Set(profile.results.map(v=>v.ranger)).size;if($('selCount'))$('selCount').textContent=cleared+'/'+RANGERS.length+' CLEARED';$('selectedName').textContent=ranger.name+' Ranger';$('selectedRole').textContent=ranger.role.toUpperCase();$('selectedStory').textContent=ranger.intro;
  const g=$('selectedArt').getContext('2d');g.clearRect(0,0,300,280);g.imageSmoothingEnabled=false;g.drawImage(atlases[ranger.id][0],-10,-4,320,280);
  [...$('roster').children].forEach((b,j)=>{b.classList.toggle('selected',i===j);b.setAttribute('aria-pressed',String(i===j));});$('resume').hidden=profile.checkpoint?.id!==ranger.id;
 }
@@ -388,6 +401,10 @@ let shownMode='';function tick(now){if(mode!==shownMode&&document.body?.dataset)
 function keyDown(code){if(!keys.has(code))taps.add(code);keys.add(code);}
 addEventListener('keydown',e=>{if(e.target instanceof HTMLInputElement)return;
  if(mode==='title'&&(e.code==='Enter'||e.code==='Space')){e.preventDefault();if(!e.repeat)leaveTitle();return;}
+ if(mode==='select'&&!$('missionSelect').hidden){const cols=getComputedStyle($('roster')).gridTemplateColumns.split(' ').length||7,mv={ArrowLeft:-1,ArrowRight:1,ArrowUp:-cols,ArrowDown:cols}[e.code];
+  if(mv!==undefined){e.preventDefault();const n=selected+mv;if(n>=0&&n<RANGERS.length){selectRanger(n);tone(520,.05,'square');$('roster').children[n]?.focus?.({preventScroll:true});}return;}
+  if((e.code==='Enter'||e.code==='Space')&&!(e.target instanceof HTMLButtonElement)){e.preventDefault();if(!e.repeat)startMission();return;}
+  if(e.code==='Escape'){e.preventDefault();showTitle();return;}}
  if(e.code==='Escape'){e.preventDefault();if(!e.repeat)pause();return;}
  if((e.code==='Enter'||e.code==='Space')&&mode==='dialog'){e.preventDefault();if(!e.repeat)nextLine();return;}
  if((mode==='task'||mode==='quiz')&&activeQuestion){const n=/^(Digit|Numpad)([1-4])$/.exec(e.code);if(n&&!activeQuestion.solved){e.preventDefault();$('answers').children[+n[2]-1]?.click();return;}}

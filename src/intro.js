@@ -10,7 +10,7 @@ const IW=640,IH=360,IFLOOR=318;
 
 /* ---------- small drawing helpers ---------- */
 function ispr(id,frame,x,y,scale=1,face=1,o={}){const art=atlases[id]?.[frame];if(!art)return;const g=ictx;g.save();g.translate(Math.round(x),Math.round(y));
- if(o.rot)g.rotate(o.rot);g.scale(face*scale,scale);g.globalAlpha=o.alpha??1;g.imageSmoothingEnabled=false;
+ if(o.rot)g.rotate(o.rot);g.scale(face*scale,scale);g.globalAlpha=o.alpha??1;g.imageSmoothingEnabled=!!o.smooth;g.imageSmoothingQuality='high';
  const src=o.tint?introTint(id,frame,o.tint):art;g.drawImage(src,-64,-102);g.restore();}
 const introTints={};
 function introTint(id,frame,color){const k=id+frame+color;return introTints[k]||(introTints[k]=tinted(atlases[id][frame],color));}
@@ -63,7 +63,7 @@ const ICAPS=[
  [45.2,48.2,'CRISPR RANGER','Then I’ll cut you out of it.'],
  [50.4,52.5,'THE PHAGE','…Cute.'],
  [54.4,58,'','Even the bacteria’s own defence could not stop it alone.'],
- [58.4,63.8,'NUCLEUS RANGER','Archive to all Rangers: the cell is under attack. Ranger Protocol, NOW!'],
+ [58.4,63.8,'NUCLEUS RANGER','Archive to all Rangers: the cell is under attack. Cell Protocol, NOW!'],
  [72.8,77,'','Fourteen Rangers. Fourteen jobs. Do your job, and the city fights back.'],
  [77.3,81,'THE PHAGE','Then come and find me… if you can.'],
 ];
@@ -233,41 +233,42 @@ function introImpact(k){const g=ictx,phase=Math.floor(k/.1)%4,inv=phase%2===1,in
  g.fillStyle=inv?'#ff1e3c':paper;g.beginPath();g.moveTo(4,-3);g.lineTo(len,-2);g.lineTo(len+4,0);g.lineTo(len,2);g.lineTo(4,3);g.fill();g.restore();
  // the contact point: a starburst
  g.save();g.translate(cx,cy);g.fillStyle=inv?'#ff1e3c':'#fff';g.strokeStyle=ink;g.lineWidth=3;g.beginPath();for(let i=0;i<16;i++){const r=i%2?10:26+((i*7)%3)*6,a=i*Math.PI/8+k*4;g.lineTo(Math.cos(a)*r,Math.sin(a)*r);}g.closePath();g.fill();g.stroke();g.restore();}
-/* close-up: the blade caught between two fingers */
-function introPinch(k){const g=ictx,shake=k<.3?(1-k/.3)*7:0,sx=(Math.random()-.5)*shake,sy=(Math.random()-.5)*shake;
- g.fillStyle='#090410';g.fillRect(0,0,IW,IH);g.save();g.translate(sx,sy);
- // speed streaks behind
- for(let i=0;i<26;i++){const y=(i*41)%IH,x=(i*97+k*600)%(IW+200)-100;g.fillStyle=i%4?'#ffffff10':'#ff1e3c22';g.fillRect(x,y,160,2);}
- // the Phage looming behind, out of focus, his visor catching the blade's glow
- g.save();g.globalAlpha=.85;try{g.filter='blur(2.5px)';}catch(e){}ispr('phage',0,470,700,6.2,1);try{g.filter='none';}catch(e){}g.restore();
- g.fillStyle='rgba(9,4,16,.45)';g.fillRect(0,0,IW,IH);
- g.save();g.globalCompositeOperation='lighter';const vg=g.createRadialGradient(486,120,2,486,120,70);vg.addColorStop(0,'rgba(107,244,220,'+(.35+.15*Math.sin(k*40))+')');vg.addColorStop(1,'rgba(107,244,220,0)');g.fillStyle=vg;g.fillRect(400,40,180,160);g.restore();
- // the blade comes in from the top left and stops dead
- const A=.5,tipX=318,tipY=214,L=330;drawSword(tipX-Math.cos(A)*L,tipY-Math.sin(A)*L,A,L,1.5,2.4);
- // the hand, in the blade's frame: the blade runs along +x and its tip sits at the origin
- g.save();g.translate(tipX,tipY);g.rotate(A);const Z=1.25;g.scale(Z,Z);
- const out='#050308',glove='#262630',gloveHi='#4a4a5c',rimC='rgba(107,244,220,.85)';g.lineJoin='round';g.lineCap='round';
- const blob=(pts,fill,lw=3)=>{g.beginPath();pts.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.closePath();g.fillStyle=fill;g.strokeStyle=out;g.lineWidth=lw;g.fill();g.stroke();};
- const finger=(x1,y1,x2,y2,w,fill=glove)=>{g.strokeStyle=out;g.lineWidth=w+5;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();g.strokeStyle=fill;g.lineWidth=w;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();};
- // forearm in the rusty suit, with the yellow trim, running off to the lower right
- blob([[96,-30],[300,-46],[300,52],[96,40]],'#7b4521');g.fillStyle='#a8622e';g.fillRect(100,-24,200,8);g.fillStyle='#ffd23f';g.fillRect(100,18,200,4);
- blob([[78,-38],[104,-40],[106,46],[80,44]],'#ffd23f');g.fillStyle='#c48f12';g.fillRect(82,24,22,14);// cuff
- // back of the hand
- blob([[18,-30],[48,-40],[84,-36],[88,40],[52,44],[22,30]],glove);g.fillStyle=gloveHi;g.beginPath();g.ellipse(56,-20,22,8,-.1,0,7);g.fill();
- // curled middle, ring and little fingers tucked under
- for(let j=0;j<3;j++){const y=16+j*10;finger(42,y,24,y+6,12);finger(24,y+6,30,y+12,11);}
- // the thumb from below and the index finger from above meet on the blade's flat
- finger(48,26,18,16,15);finger(18,16,-4,9,13);
- finger(30,-26,6,-20,15);finger(6,-20,-6,-9,13);
- g.fillStyle=gloveHi;g.beginPath();g.ellipse(22,-25,6,3,-.3,0,7);g.fill();g.beginPath();g.ellipse(30,20,6,3,.3,0,7);g.fill();// knuckle shine
- // rim light from the blade along the fingertips
- g.strokeStyle=rimC;g.lineWidth=2;g.beginPath();g.moveTo(8,-14);g.lineTo(-8,-9);g.moveTo(8,13);g.lineTo(-6,9);g.stroke();
+/* close-up, after the Doomsday shot: two raised fingers stop the blade dead, lightning everywhere; then his visor */
+function introPinch(k){const g=ictx;
+ const shake=k<.35?(1-k/.35)*8:k<1.2?1.2:0,sx=(Math.random()-.5)*shake,sy=(Math.random()-.5)*shake;
+ // cold blue night, soft out-of-focus lights
+ const bg=g.createLinearGradient(0,0,IW,0);bg.addColorStop(0,'#0b2a44');bg.addColorStop(.45,'#123a5c');bg.addColorStop(1,'#050d1a');g.fillStyle=bg;g.fillRect(0,0,IW,IH);
+ for(let i=0;i<14;i++){const x=(i*173)%IW,y=60+(i*67)%230,r=6+(i*7)%14;const bk=g.createRadialGradient(x,y,0,x,y,r);bk.addColorStop(0,'rgba(140,200,255,.18)');bk.addColorStop(1,'rgba(140,200,255,0)');g.fillStyle=bk;g.fillRect(x-r,y-r,2*r,2*r);}
+ const push=1+Math.min(k,2.75)*.035;g.save();g.translate(sx,sy);g.translate(322,166);g.scale(push,push);g.translate(-322,-166);
+ // the Phage in profile on the right, facing the blade, half in shadow
+ const top=introTop('phage',0),S=7.2,hx=560,hy=150;g.save();try{g.filter='blur(1.2px) brightness(.7)';}catch(e){}
+ ispr('phage',0,hx-top[0]*S,hy-(top[1]+8)*S,S,1);try{g.filter='none';}catch(e){}g.restore();
+ const shade=g.createLinearGradient(470,0,IW,0);shade.addColorStop(0,'rgba(5,13,26,0)');shade.addColorStop(1,'rgba(5,13,26,.75)');g.fillStyle=shade;g.fillRect(470,0,IW-470,IH);
+ // the blade, swung in from the left, stopped at the fingertips
+ const cx=322,cy=166,A=-.06,L=380;drawSword(cx-Math.cos(A)*L,cy-Math.sin(A)*L,A,L-8,1.7,3);
+ g.save();g.translate(327,166);g.scale(1.7,1.7);g.translate(-327,-166);
+ // the hand, upright: forearm and cuff, palm side-on, two fingers straight up, the rest curled
+ const out='#04070d',glove='#20232c',lit='#5f7c99',fin=(x1,y1,x2,y2,w,col)=>{g.lineCap='round';g.strokeStyle=out;g.lineWidth=w+5;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();g.strokeStyle=col;g.lineWidth=w;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();};
+ const poly=(pts,fill)=>{g.beginPath();pts.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.closePath();g.fillStyle=fill;g.strokeStyle=out;g.lineWidth=3;g.lineJoin='round';g.fill();g.stroke();};
+ poly([[322,262],[378,258],[392,IH+10],[312,IH+10]],'#6e3e1d');g.fillStyle='#ffd23f';g.fillRect(328,280,5,IH-280);g.fillStyle='#93552a';g.fillRect(352,272,14,IH-272);// sleeve
+ poly([[318,240],[380,236],[382,264],[320,268]],'#ffd23f');g.fillStyle='#c48f12';g.fillRect(322,256,58,8);// cuff
+ fin(358,196,374,182,13,glove);fin(374,182,370,200,12,glove);fin(364,206,378,196,12,glove);fin(378,196,372,214,11,glove);// curled ring and little fingers
+ poly([[324,190],[368,186],[378,212],[374,240],[322,242],[318,214]],glove);// palm, side-on
+ g.fillStyle='#343846';g.beginPath();g.ellipse(352,214,16,20,0,0,7);g.fill();
+ fin(344,192,346,130,12,'#2a2d38');// middle finger, just behind
+ fin(334,194,334,138,13,glove);// index finger, in front
+ fin(326,236,332,206,13,glove);fin(332,206,340,196,11,glove);// thumb folded across
+ // cold light from the blade along the finger pads and knuckles
+ g.strokeStyle='rgba(180,250,255,.95)';g.lineWidth=2.5;g.beginPath();g.moveTo(327,140);g.lineTo(327,192);g.moveTo(319,214);g.lineTo(321,238);g.stroke();
+ g.strokeStyle=lit;g.lineWidth=2;g.beginPath();g.moveTo(340,140);g.lineTo(340,188);g.stroke();g.restore();
+ // the contact: a bloom and forked lightning crawling out of it
+ g.save();g.globalCompositeOperation='lighter';const bl=g.createRadialGradient(cx,cy,0,cx,cy,90+Math.sin(k*50)*8);bl.addColorStop(0,'rgba(255,255,255,.85)');bl.addColorStop(.14,'rgba(140,240,255,.55)');bl.addColorStop(1,'rgba(60,160,255,0)');g.fillStyle=bl;g.fillRect(cx-110,cy-110,220,220);
+ const bolt=(x,y,a,len,w,depth)=>{g.lineWidth=w;g.beginPath();g.moveTo(x,y);let px=x,py=y;const n=6;for(let i=1;i<=n;i++){const t=i/n,jit=(Math.random()-.5)*len*.35;px=x+Math.cos(a)*len*t-Math.sin(a)*jit;py=y+Math.sin(a)*len*t+Math.cos(a)*jit;g.lineTo(px,py);if(depth&&Math.random()<.35)bolt(px,py,a+(Math.random()-.5)*1.6,len*.45,w*.6,depth-1);}g.stroke();};
+ for(let i=0;i<7;i++){const a=Math.PI+(Math.random()-.5)*3.6;g.strokeStyle=i%3?'rgba(170,240,255,.9)':'#ffffff';g.shadowColor='#7fe8ff';g.shadowBlur=10;bolt(cx,cy,a,60+Math.random()*110,2.4,1);}
+ g.shadowBlur=0;g.restore();
  g.restore();
- // sparks where the fingers grip
- g.save();g.globalCompositeOperation='lighter';for(let i=0;i<10;i++){const a=Math.PI+(Math.random()-.5)*2.4,r=12+Math.random()*40;g.strokeStyle=i%2?'#6bf4dc':'#ffffff';g.lineWidth=2;g.beginPath();g.moveTo(tipX-10,tipY-4);g.lineTo(tipX-10+Math.cos(a)*r,tipY-4+Math.sin(a)*r);g.stroke();}g.restore();
- g.restore();
- // letterbox squeeze for the close-up
- g.fillStyle='#000';g.fillRect(0,0,IW,34);g.fillRect(0,IH-34,IW,34);}
+ // wide letterbox, like the trailer's middle panel
+ g.fillStyle='#000';g.fillRect(0,0,IW,52);g.fillRect(0,IH-52,IW,52);}
 /* ---------- scene 6: the alarm (58-64) ---------- */
 function sceneAlarm(t){const g=ictx,lt=t-58;ibg('archive',lt*6,.3);
  const sweep=lt*3;g.save();g.globalCompositeOperation='lighter';for(const s of [0,Math.PI]){const a=sweep+s,gr=g.createRadialGradient(320,40,0,320,40,500);gr.addColorStop(0,'rgba(255,40,70,.5)');gr.addColorStop(1,'rgba(255,40,70,0)');g.fillStyle=gr;g.beginPath();g.moveTo(320,40);g.arc(320,40,500,a-.3,a+.3);g.fill();}g.restore();
@@ -275,7 +276,7 @@ function sceneAlarm(t){const g=ictx,lt=t-58;ibg('archive',lt*6,.3);
  ishadow(320,34);ispr('nucleus',lt<1.2?0:lt<1.6?5:6,320,IFLOOR,2,1);
  const on=Math.floor(lt*4)%2;g.fillStyle='#14040ae6';g.fillRect(150,26,340,36);g.fillStyle=on?'#ff2d55':'#ffd23f';g.fillRect(150,26,340,3);g.fillRect(150,59,340,3);
  for(let x=150;x<490;x+=24){g.fillStyle=on?'#ff2d5533':'#ffd23f22';g.fillRect(x,30,12,28);}
- g.font='14px "Press Start 2P", monospace';g.textAlign='center';g.fillStyle=on?'#ff5d78':'#ffe1e6';g.fillText('RANGER PROTOCOL',320,51);}
+ g.font='14px "Press Start 2P", monospace';g.textAlign='center';g.fillStyle=on?'#ff5d78':'#ffe1e6';g.fillText('CELL PROTOCOL',320,51);}
 /* ---------- scene 7: roll call (64-72.4) ---------- */
 function sceneRoll(t){const g=ictx,lt=t-64,i=Math.min(13,Math.floor(lt/.6)),k=(lt-i*.6)/.6,r=RANGERS[i];
  g.fillStyle='#050a1c';g.fillRect(0,0,IW,IH);
@@ -290,7 +291,7 @@ function sceneRoll(t){const g=ictx,lt=t-64,i=Math.min(13,Math.floor(lt/.6)),k=(l
  ispr(r.id,frame,200,y,2.2,1);
  g.save();g.globalAlpha=clamp01(k*5-.6);g.translate((1-ease(clamp01(k*4-.5)))*40,0);g.font='22px "Press Start 2P", monospace';g.textAlign='left';const name=r.name.toUpperCase();
  g.lineWidth=6;g.strokeStyle='#050a1c';g.strokeText(name,300,150);g.fillStyle='#fff';g.fillText(name,300,150);
- g.font='9px "Press Start 2P", monospace';g.fillStyle='#050a1c';g.fillText(r.role.toUpperCase(),302,176);g.restore();
+ let rs=9;g.font=rs+'px "Press Start 2P", monospace';while(rs>6&&g.measureText(r.role.toUpperCase()).width>IW-320){rs--;g.font=rs+'px "Press Start 2P", monospace';}g.fillStyle='#050a1c';g.fillText(r.role.toUpperCase(),302,176);g.restore();
  if(k<.1){g.fillStyle='rgba(255,255,255,'+(1-k*10)*.6+')';g.fillRect(0,0,IW,IH);}}
 /* ---------- scene 8: the stand (72.4-81) ---------- */
 function sceneStand(t){const g=ictx,lt=t-72.4;ibg('environment',200+Math.max(0,lt-6.6)*120,.1,'rgba(255,190,90,.08)');

@@ -39,7 +39,9 @@ function combatTerminalBlock(){const m=combatMode();return m&&m.terminalBlock?m.
 function combatArenaStart(ar){const m=combatMode();if(m&&m.start)m.start(ar);}
 function combatSpawned(e,n,ar){const m=combatMode();if(!m)return;
  if(m.spawn)m.spawn(e,n,ar);
- if(m.targetEvery&&!e.target&&n%m.targetEvery===0){const g=nearestGuard(e,ar);if(g){e.target=g;e.side=(n>>1)%2?-1:1;}}}
+ // enemies spawn alternately left and right, so thieves are picked in left/right pairs (n = 0,1 then 4,5 ...):
+ // both sides of the arena get attacked, and each thief goes for the objective on its own side
+ if(m.targetEvery&&!e.target&&n%(2*m.targetEvery)<2){const g=nearestGuard(e,ar);if(g){e.target=g;e.side=e.x<g.x?-1:1;}}}
 function combatArenaUpdate(ar,dt){const m=combatMode();if(!m)return;
  for(const g of guardsIn(ar)){
   if(g.fail!==false&&g.value<=0&&!g.done){softFail(ar,m.failMsg||'Protect the objective.');return;}

@@ -135,6 +135,8 @@ evaluate(`ranger=RANGERS.find(r=>r.id==='cytoplasm');selected=RANGERS.indexOf(ra
 check(evaluate("run.retries===r0+1 && ar.state==='fight' && !enemies.some(e=>e.arena===ar&&e.hp>0) && guardsIn(ar)[0].value>=70"),'A drained station rewinds the wave instead of ending the run');checks++;
 evaluate(`for(let n=0;n<240;n++){hitStop=0;step(1/60);taps.clear();}var thief=enemies.find(e=>e.arena===ar&&e.target&&e.hp>0);for(let n=0;n<600&&thief&&!thief.siph;n++){hitStop=0;player.inv=1;step(1/60);taps.clear();}`);
 check(evaluate('!!thief && thief.siph'),'Viruses walk to the reaction station and clamp on');checks++;
+for(const id of ['golgi','dna']){evaluate(`ranger=RANGERS.find(r=>r.id==='${id}');selected=RANGERS.indexOf(ranger);startMission();loadZone(ZONE_STYLES['${id}'].indexOf('combat'));while(mode==='dialog')nextLine();enemies=[];var hitSet=new Set();var ar=world.arenas[1];player.x=ar.a+150;for(let n=0;n<900;n++){hitStop=0;player.inv=.6;step(1/60);taps.clear();for(const e of enemies)if(e.target&&e.hp>0)hitSet.add(e.target);}`);
+ check(evaluate('hitSet.size')===2,id+': thieves go after both objectives, not just the left one');checks++;}
 // Puzzle zones: every room in every Ranger's puzzle zone can be solved, and wrong moves don't solve it.
 evaluate(`var puzzleReport=[];var solveRoomFully=(room)=>{let guard=0;
  if(room.kind==='sequence'){const wrong=room.switches.find(s=>s.value!==room.cfg.answer[0]);if(wrong){pressSwitch(room,wrong);if(room.pos!==0)puzzleReport.push(ranger.id+' wrong advanced');}

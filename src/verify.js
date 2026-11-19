@@ -26,7 +26,7 @@ check(evaluate('RANGERS.length')===14,'14 characters');checks++;
 check(evaluate('new Set(RANGERS.map(r=>{ranger=r;return JSON.stringify(makeWorld(0))})).size')===14,'14 distinct route layouts');checks++;
 evaluate("muted=true; for(const r of RANGERS){atlases[r.id]=Array(16).fill({});portraits[r.id]={};}atlases.phage=Array(8).fill({});");
 for(let i=0;i<14;i++){
- evaluate(`selected=${i};ranger=RANGERS[selected];startMission();while(mode==='dialog')nextLine();`);
+ evaluate(`selected=${i};ranger=RANGERS[selected];startMission();while(mode==='dialog')nextLine();if(world.shooter){loadZone(ZONE_STYLES[ranger.id].indexOf('platform'));while(mode==='dialog')nextLine();}`);
  check(evaluate('mode')==='play','Start enters play');checks++;
  // Damage occurs at contact, never during windup, and once per swing.
  evaluate("enemies=[makeEnemy(player.x+45,0)];enemies[0].timer=9;var hp0=enemies[0].hp;attack('melee');step(.06);");
@@ -68,7 +68,7 @@ check(evaluate('player.x>pit[1] && player.y<=302 && player.hp===10'),'Widest jum
 evaluate("keys.clear();player.inv=0;for(let n=0;n<30;n++){player.inv=0;damagePlayer(2,player.x+20);}");check(evaluate('mode==="play" && player.hp===10'),'Rangers are invincible: hits never cost health or end the run');checks++;
 check(evaluate('player.inv>0'),'A hit still registers (flash and knockback)');checks++;
 // Dive kick: tuck, dive, hit an enemy below and bounce; or land and send out a shockwave.
-evaluate("selected=1;ranger=RANGERS[1];startMission();while(mode==='dialog')nextLine();enemies=[makeEnemy(player.x+75,2)];enemies[0].timer=9;var dhp=enemies[0].hp;player.y=FLOOR-120;player.ground=false;player.vy=0;taps.add('KeyZ');step(1/60);taps.clear();keys.clear();");
+evaluate("selected=1;ranger=RANGERS[1];startMission();while(mode==='dialog')nextLine();loadZone(ZONE_STYLES.ribosome.indexOf('platform'));while(mode==='dialog')nextLine();enemies=[makeEnemy(player.x+75,2)];enemies[0].timer=9;var dhp=enemies[0].hp;player.y=FLOOR-120;player.ground=false;player.vy=0;taps.add('KeyZ');step(1/60);taps.clear();keys.clear();");
 check(evaluate("player.action.kind")==='dive','Attack in the air starts a dive kick (no Down needed)');checks++;
 check(evaluate("frameForPlayer()")===11,'Dive starts with a tuck');checks++;
 evaluate("for(let n=0;n<10;n++){step(1/60);taps.clear();}");check(evaluate("player.action?.kind==='dive' && frameForPlayer()===9 && player.vy>0"),'Dive kick pose plunges downward');checks++;
@@ -109,7 +109,7 @@ evaluate(`ranger=RANGERS.find(r=>r.id==='atp');selected=0;startMission();while(m
  keys.add('ArrowRight');for(let n=0;n<40;n++){step(1/60);taps.clear();}keys.clear();`);
 check(evaluate('player.y===lift.y1 && player.x>lift.x+lift.w'),'Lift carries the Ranger up to the ledge');checks++;
 // Combat zones: arenas lock, waves spawn from above, clearing all waves unlocks and drops a molecule.
-for(const r of ['ribosome','dna','mitosis','crispr','mito']){
+for(const r of ['nucleus','smoother','lysosome','crispr','mito']){
  evaluate(`ranger=RANGERS.find(r=>r.id==='${r}');selected=RANGERS.indexOf(ranger);startMission();loadZone(ZONE_STYLES[ranger.id].indexOf('combat'));while(mode==='dialog')nextLine();enemies=[];var ar=world.arenas[0];player.x=ar.a+150;step(1/60);`);
  check(evaluate('world.lock===ar'),r+' arena locks');checks++;
  evaluate(`for(let n=0;n<2000&&ar.state==='fight';n++){for(const e of enemies)if(e.hp>0&&e.drop===0&&!e.latched){e.hp=1;damageEnemy(e,9);}hitStop=0;player.hp=10;player.inv=1;step(1/60);taps.clear();}`);
@@ -137,6 +137,23 @@ evaluate(`for(let n=0;n<240;n++){hitStop=0;step(1/60);taps.clear();}var thief=en
 check(evaluate('!!thief && thief.siph'),'Viruses walk to the reaction station and clamp on');checks++;
 for(const id of ['golgi','dna']){evaluate(`ranger=RANGERS.find(r=>r.id==='${id}');selected=RANGERS.indexOf(ranger);startMission();loadZone(ZONE_STYLES['${id}'].indexOf('combat'));while(mode==='dialog')nextLine();enemies=[];var hitSet=new Set();var ar=world.arenas[1];player.x=ar.a+150;for(let n=0;n<900;n++){hitStop=0;player.inv=.6;step(1/60);taps.clear();for(const e of enemies)if(e.target&&e.hp>0)hitSet.add(e.target);}`);
  check(evaluate('hitSet.size')===2,id+': thieves go after both objectives, not just the left one');checks++;}
+// First-person zones: a bot plays Ribosome and Mitosis through all three stages to the station.
+evaluate(`var shBot=(id)=>{ranger=RANGERS.find(r=>r.id===id);selected=RANGERS.indexOf(ranger);startMission();loadZone(ZONE_STYLES[id].indexOf('combat'));while(mode==='dialog')nextLine();const s=world.shooter;let n=0;
+ while(s.stage<3&&n++<60000){
+  if(s.phase==='card')shooterPress(s,false);
+  else if(s.phase==='build'){const b=s.build;if(!b.done){const want=WHEEL.aaOf(b.seq[b.pos]);b.sel=WHEEL.groups.findIndex(g=>g.aa===want);s.pointer=false;shooterPress(s,false);}}
+  else if(s.phase==='fight'&&n%5===0){const t=s.targets.filter(t=>t.hp>0&&(id==='ribosome'||t.tumor)).sort((a,b)=>a.z-b.z)[0];
+   if(t){if(id==='ribosome'){const q=shProj(t.lx,t.z);s.aim.x=q.x;s.aim.y=q.y-26*q.s;}else{const c=SHOOTERS.mitosis.center(t);s.aim.x=c[0];s.aim.y=c[1];}s.pointer=false;shooterPress(s,false);}}
+  hitStop=0;step(1/60);}
+ const cells=world.cells.filter(c=>c.taken).length,ph=s.phase;shooterPress(s,false);const asked=mode==='task';mode='play';world.terminal.done=true;const z0=zone;for(let i=0;i<60;i++)step(1/60);
+ return [s.stage,ph,cells,asked,zone===z0+1].join();};`);
+for(const id of ['ribosome','mitosis'])check(evaluate(`shBot('${id}')`)==='3,station,3,true,true',id+' first-person zone plays through three stages, the station and on to the next zone'),checks++;
+evaluate(`ranger=RANGERS.find(r=>r.id==='ribosome');selected=RANGERS.indexOf(ranger);startMission();loadZone(ZONE_STYLES.ribosome.indexOf('combat'));while(mode==='dialog')nextLine();var s=world.shooter;shooterPress(s,false);var b=s.build,want=WHEEL.aaOf(b.seq[0]);b.sel=WHEEL.groups.findIndex(g=>g.aa!==want);s.pointer=false;shooterPress(s,false);var afterWrong=b.pos;b.sel=WHEEL.groups.findIndex(g=>g.aa===want);shooterPress(s,false);`);
+check(evaluate("afterWrong===0 && b.pos===1 && b.chain[0]==='M' && b.wrong===0"),'Codon wheel: a wrong amino acid does not advance; the right one adds it to the protein');checks++;
+check(evaluate("WHEEL.aaOf('AUG')==='M' && WHEEL.aaOf('UGG')==='W' && WHEEL.aaOf('UAA')==='*' && WHEEL.aaOf('UGA')==='*' && WHEEL.aaOf('GGC')==='G' && WHEEL.aaOf('AGA')==='R' && WHEEL.aaOf('CAU')==='H' && WHEEL.groups.length===25"),'Codon wheel uses the standard genetic code');checks++;
+check(evaluate("MISSILES.every(st=>st.every(v=>v[0]==='AUG' && WHEEL.aaOf(v.at(-1))==='*' && v.slice(0,-1).every(c=>WHEEL.aaOf(c)!=='*'))) && MISSILES.map(st=>st[0].slice(0,-1).map(WHEEL.aaOf).join('')).join()==='MTNK,MTNKCL,MTNKCLLQ'"),'Every missile mRNA starts with AUG, ends with one stop codon, and codes the real start of interferon-beta');checks++;
+evaluate(`ranger=RANGERS.find(r=>r.id==='mitosis');selected=RANGERS.indexOf(ranger);startMission();loadZone(ZONE_STYLES.mitosis.indexOf('combat'));while(mode==='dialog')nextLine();var s=world.shooter;shooterPress(s,false);for(let i=0;i<400;i++){hitStop=0;step(1/60);}var h=s.targets.find(t=>t.hp>0&&!t.tumor),m0=s.mistakes;s.targets=[h];var c=SHOOTERS.mitosis.center(h);s.aim.x=c[0];s.aim.y=c[1];shooterPress(s,false);`);
+check(evaluate("h.hp===1 && s.mistakes===m0+1"),'Lasering a healthy cell is a mistake and does not destroy it');checks++;
 // Puzzle zones: every room in every Ranger's puzzle zone can be solved, and wrong moves don't solve it.
 evaluate(`var puzzleReport=[];var solveRoomFully=(room)=>{let guard=0;
  if(room.kind==='sequence'){const wrong=room.switches.find(s=>s.value!==room.cfg.answer[0]);if(wrong){pressSwitch(room,wrong);if(room.pos!==0)puzzleReport.push(ranger.id+' wrong advanced');}

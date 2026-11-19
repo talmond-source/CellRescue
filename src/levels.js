@@ -40,7 +40,7 @@ function buildCombat(index,route){
   w.arenas.push({a,b,waves:sizes[i].map(n=>Array.from({length:n},()=>Math.floor(R()*3))),wave:-1,state:'idle',delay:0,elite:i===2});
   w.cells.push(cell((a+b)/2,FLOOR-40,true));
  });
- w.length=1700+560+420;setupCombatMode(w);return w;
+ w.length=1700+560+420;if(!shooterSetup(w))setupCombatMode(w);return w;
 }
 
 /* Puzzle zone: three rooms, each sealed by a biology lock. */

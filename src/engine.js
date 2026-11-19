@@ -144,8 +144,9 @@ function loadZone(index){
   puzzle:'Three gates are sealed with biology locks. Solve each one to free a '+molecule+' molecule.'}[world.style];
  const lines=[['crispr',intro],[ranger.id,world.boss?'At half strength he will raise a shield. I’ll use the control station on the left to disable it, then finish the fight.':styleLine]];
  if(world.style==='puzzle')lines.push([ranger.id,world.rooms[0].cfg.line.replace(/\.$/,'')+'. '+(world.rooms[0].kind==='carry'?'E picks things up and uses machines.':world.rooms[0].kind==='sequence'?'I hit the switches with punches, kicks or dive kicks.':'I hit the switches with punches or kicks.')]);
- if(zone===0)lines.push(['crispr','Z chains two punches into a kick. Press Z in the air to slam down with a dive kick. X draws your blaster and C dodges. Press E at the station when you have all three molecules.']);
- if(zone===0&&!world.boss)lines.push(['crispr',FAMILY[ENEMY_FAMILY[ranger.id]].tip]);
+ if(world.shooter)lines.push(['crispr','First-person mode! Aim with the mouse or the arrow keys and fire with a click or Z. On a touchscreen, just tap where you want to fire.']);
+ else if(zone===0)lines.push(['crispr','Z chains two punches into a kick. Press Z in the air to slam down with a dive kick. X draws your blaster and C dodges. Press E at the station when you have all three molecules.']);
+ if(zone===0&&!world.boss&&!world.shooter)lines.push(['crispr',FAMILY[ENEMY_FAMILY[ranger.id]].tip]);
  talk(lines,()=>mode='play');updateHUD();
 }
 function makeEnemy(x,type){const family=type===3?'phage':(world&&world.family)||ENEMY_FAMILY[ranger.id]||'bacteria',info=FAMILY[family],hp=type===3?70:Math.max(3,5+type*2+(info?.hp||0));return {x,y:FLOOR,home:x,type,family,hp,max:hp,face:-1,state:'approach',timer:.4+(x%5)*.1,clock:0,hurt:0,dead:0,attackCount:0,hit:false,walk:0,scale:1,drop:0,lift:0};}
@@ -232,6 +233,7 @@ function step(dt){
  const p=player;for(const key of ['inv','dodge','dodgeCool','chain','coyote','jumpBuffer'])p[key]=Math.max(0,p[key]-dt);
  if(comboTimer>0)comboTimer-=dt;else comboCount=0;
  if(toastTimer>0){toastTimer-=dt;if(toastTimer<=0)$('toast').hidden=true;}
+ if(world.shooter){shooterStep(dt);taps.clear();return;}
  if(p.ground)p.coyote=.1;
  if(taps.has('ArrowUp')||taps.has('Space'))p.jumpBuffer=.12;
  if(p.jumpBuffer&&p.coyote){p.vy=-420;p.ground=false;p.coyote=0;p.jumpBuffer=0;tone(360,.09,'triangle');}
@@ -315,6 +317,7 @@ function drawPlatform(x,y,w,base=false){x-=camera;rect('#0a182b',x,y,w,base?60:1
  if(!base){rect('#42657d',x+7,y+17,5,12);rect('#42657d',x+w-12,y+17,5,12);}}
 function draw(){
  if(!world||$('screen').hidden)return;ctx.imageSmoothingEnabled=false;ctx.save();ctx.clearRect(0,0,W,H);if(shake)ctx.translate(Math.round((Math.random()-.5)*shake),Math.round((Math.random()-.5)*shake));
+ if(world.shooter){shooterDraw();ctx.restore();return;}
  const bgW=H*environment.width/environment.height,offset=(camera*.26+zone*220+(world.mode?.bgSpeed||0)*clock)%bgW;ctx.drawImage(environment,-offset,0,bgW,H);ctx.drawImage(environment,bgW-offset,0,bgW,H);rect('#07152655',0,0,W,H);
  // Fine drifting motes give depth without changing the collision surface.
  for(let i=0;i<24;i++){const x=((i*79-clock*(4+i%3)-camera*.12)%W+W)%W,y=70+(i*47)%210;rect(i%3?'#80d8d755':'#f9d98a77',x,y,1,1);}

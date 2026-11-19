@@ -40,7 +40,7 @@ function buildCombat(index,route){
   w.arenas.push({a,b,waves:sizes[i].map(n=>Array.from({length:n},()=>Math.floor(R()*3))),wave:-1,state:'idle',delay:0,elite:i===2});
   w.cells.push(cell((a+b)/2,FLOOR-40,true));
  });
- w.length=1700+560+420;return w;
+ w.length=1700+560+420;setupCombatMode(w);return w;
 }
 
 /* Puzzle zone: three rooms, each sealed by a biology lock. */
@@ -256,14 +256,16 @@ function blockByWalls(oldX,x,y){
 function revealCell(i){const c=world.cells[i];if(c&&c.hidden){c.hidden=false;burst(c.x,c.y,'#9fffea',22);tone(880,.12,'triangle');}}
 /* Combat arenas */
 function updateArenas(dt){
- const p=player;
+ const p=player,m=combatMode();
+ if(m&&m.tick)m.tick(dt);
  for(const [i,ar] of world.arenas.entries()){
-  if(ar.state==='idle'&&p.x>ar.a+90&&p.x<ar.b-60){ar.state='fight';world.lock=ar;ar.delay=.6;toast('LOCKDOWN — clear the wave');tone(220,.25,'sawtooth',.03);}
+  if(ar.state==='idle'&&p.x>ar.a+90&&p.x<ar.b-60){ar.state='fight';world.lock=ar;ar.delay=.6;toast(m?.custom?'LOCKDOWN':'LOCKDOWN — clear the wave');tone(220,.25,'sawtooth',.03);combatArenaStart(ar);}
   if(ar.state!=='fight')continue;
+  combatArenaUpdate(ar,dt);if(ar.state!=='fight'||(m&&m.custom))continue;
   const alive=enemies.some(e=>e.arena===ar&&e.hp>0);
-  if(!alive){ar.delay-=dt;if(ar.delay<=0){ar.wave++;
-   if(ar.wave>=ar.waves.length){ar.state='done';world.lock=null;revealCell(i);stamp((ar.a+ar.b)/2,'ARENA '+(i+1)+' CLEAR');toast('Arena clear — grab the '+CARGO[ranger.id][zone].toLowerCase());tone(660,.2,'triangle');}
-   else{ar.waves[ar.wave].forEach((type,n)=>{const e=makeEnemy(n%2?ar.b-50-n*18:ar.a+50+n*18,type);e.arena=ar;e.drop=-220-n*60;e.face=n%2?-1:1;if(ar.elite&&n===0){e.hp=e.max=e.max+6;e.elite=true;}enemies.push(e);});ar.delay=.9;if(ar.wave>0)toast('Wave '+(ar.wave+1)+' of '+ar.waves.length);}
+  if(!alive){ar.delay-=dt;if(ar.delay<=0){ar.wave=Math.min(ar.wave+1,ar.waves.length);
+   if(ar.wave>=ar.waves.length){if(combatReady(ar))finishArena(ar,i);else if(!ar.waitTold){ar.waitTold=true;toast(m.waitMsg,4);}}
+   else{ar.waves[ar.wave].forEach((type,n)=>{const e=makeEnemy(n%2?ar.b-50-n*18:ar.a+50+n*18,type);e.arena=ar;e.drop=-220-n*60;e.face=n%2?-1:1;if(ar.elite&&n===0){e.hp=e.max=e.max+6;e.elite=true;}enemies.push(e);combatSpawned(e,n,ar);});ar.delay=.9;if(ar.wave>0)toast('Wave '+(ar.wave+1)+' of '+ar.waves.length);}
   }}
  }
 }

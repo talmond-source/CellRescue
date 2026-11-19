@@ -140,7 +140,7 @@ function loadZone(index){
  const intro=world.boss?ranger.boss:ranger.tasks[zone][0]+'. '+(zone===0?ranger.intro:'The next station is in '+ranger.zones[zone]+'.');
  const molecule=CARGO[ranger.id][zone]?.toLowerCase();
  const styleLine={platform:'The route ahead is broken. Ride the moving platforms, stay out of the toxic pools, and grab the three '+molecule+' molecules.',
-  combat:'Phage forces are massing here. Survive each lockdown wave and I’ll recover a '+molecule+' molecule from every arena.',
+  combat:(world.mode?world.mode.line+' ':'Phage forces are massing here. ')+'Every arena you clear frees a '+molecule+' molecule.',
   puzzle:'Three gates are sealed with biology locks. Solve each one to free a '+molecule+' molecule.'}[world.style];
  const lines=[['crispr',intro],[ranger.id,world.boss?'At half strength he will raise a shield. I’ll use the control station on the left to disable it, then finish the fight.':styleLine]];
  if(world.style==='puzzle')lines.push([ranger.id,world.rooms[0].cfg.line.replace(/\.$/,'')+'. '+(world.rooms[0].kind==='carry'?'E picks things up and uses machines.':world.rooms[0].kind==='sequence'?'I hit the switches with punches, kicks or dive kicks.':'I hit the switches with punches or kicks.')]);
@@ -148,11 +148,11 @@ function loadZone(index){
  if(zone===0&&!world.boss)lines.push(['crispr',FAMILY[ENEMY_FAMILY[ranger.id]].tip]);
  talk(lines,()=>mode='play');updateHUD();
 }
-function makeEnemy(x,type){const family=type===3?'phage':ENEMY_FAMILY[ranger.id]||'bacteria',info=FAMILY[family],hp=type===3?70:Math.max(3,5+type*2+(info?.hp||0));return {x,y:FLOOR,home:x,type,family,hp,max:hp,face:-1,state:'approach',timer:.4+(x%5)*.1,clock:0,hurt:0,dead:0,attackCount:0,hit:false,walk:0,scale:1,drop:0,lift:0};}
+function makeEnemy(x,type){const family=type===3?'phage':(world&&world.family)||ENEMY_FAMILY[ranger.id]||'bacteria',info=FAMILY[family],hp=type===3?70:Math.max(3,5+type*2+(info?.hp||0));return {x,y:FLOOR,home:x,type,family,hp,max:hp,face:-1,state:'approach',timer:.4+(x%5)*.1,clock:0,hurt:0,dead:0,attackCount:0,hit:false,walk:0,scale:1,drop:0,lift:0};}
 /* on touch screens, key names in messages become the on-screen button names */
 function keyWords(t){if(!touchUI.on)return t;return t.replace(/\bZ chains/g,'B chains').replace(/([Pp])ress Z\b/g,'$1ress B').replace(/\bX draws/g,'X draws').replace(/\bC dodges/g,'L dodges').replace(/\(C\)/g,'(L)').replace(/\b([Pp])ress E\b/g,'$1ress USE');}
 function toast(text,seconds=2.8){text=keyWords(text);$('toast').textContent=text;$('toast').hidden=false;toastTimer=seconds;}
-function updateHUD(){if(!player)return;$('rangerName').textContent=ranger.name.toUpperCase();$('health').firstElementChild.style.width=player.hp*10+'%';$('health').setAttribute('aria-valuenow',player.hp);$('energy').textContent='BLASTER '+Math.floor(player.energy)+'/6';const count=world.cells.filter(c=>c.taken).length;const extra=world.lock?'LOCKDOWN · wave '+Math.max(1,world.lock.wave+1)+'/'+world.lock.waves.length:world.style==='puzzle'?puzzleObjective():null;$('objective').textContent=world.boss?(world.shieldActive&&!world.shieldUnlocked?'PHAGE SHIELD · Left station [E]':'PHAGE · Final encounter'):ranger.zones[zone]+' · '+(world.terminal.done?'Reach the exit':extra&&count<3?extra+' · '+CARGO[ranger.id][zone]+' '+count+'/3':count<3?CARGO[ranger.id][zone]+' '+count+'/3':'Activate station [E]');}
+function updateHUD(){if(!player)return;$('rangerName').textContent=ranger.name.toUpperCase();$('health').firstElementChild.style.width=player.hp*10+'%';$('health').setAttribute('aria-valuenow',player.hp);$('energy').textContent='BLASTER '+Math.floor(player.energy)+'/6';const count=world.cells.filter(c=>c.taken).length;const cm=combatHUD(),extra=world.lock?(world.mode?.custom?'LOCKDOWN':'LOCKDOWN · wave '+Math.max(1,Math.min(world.lock.waves.length,world.lock.wave+1))+'/'+world.lock.waves.length)+(cm?' · '+cm:''):world.style==='puzzle'?puzzleObjective():cm||null;$('objective').textContent=world.boss?(world.shieldActive&&!world.shieldUnlocked?'PHAGE SHIELD · Left station [E]':'PHAGE · Final encounter'):ranger.zones[zone]+' · '+(world.terminal.done?'Reach the exit':extra&&count<3?extra+' · '+CARGO[ranger.id][zone]+' '+count+'/3':count<3?CARGO[ranger.id][zone]+' '+count+'/3':'Activate station [E]');}
 function burst(x,y,color,count=12){for(let i=0;i<count;i++){const a=Math.random()*Math.PI*2,s=30+Math.random()*120;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-40,life:.25+Math.random()*.25,max:.5,color});}}
 function attack(kind){if(player.dodge>0||player.inv>.68)return;if(player.action){if(kind==='melee')player.queue=true;return;}if(kind==='shoot'&&player.energy<1){toast('Blaster recharging — melee restores energy');return;}
  if(kind==='melee'){player.combo=player.chain>0?player.combo%3+1:1;player.action={kind:player.combo===3?'kick':'punch',time:0,duration:player.combo===3?.5:.34,hit:false};player.queue=false;}
@@ -191,10 +191,10 @@ function damageEnemy(e,amount,knock=14){
    toast('Phage shield online — restore the left control station');updateHUD();return;
   }
  }
- e.hp=Math.max(0,e.hp-amount);e.hurt=.16;if(e.latched)releaseLatch(e);
+ e.hp=Math.max(0,e.hp-amount);e.hurt=.16;e.siph=false;if(e.latched)releaseLatch(e);
  if(e.family==='mutant'&&!e.child&&e.hp>0&&e.hp<=e.max/2)splitMutant(e);if(e.type!==3){enemyStep(e,e.x+player.face*knock);e.state='recover';e.timer=.3;}
  burst(e.x,e.y-(e.type===3?55:27),'#d0fff0',e.hp?10:24);hitStop=.045;shake=e.type===3?3:2;comboCount++;comboTimer=1.6;run.score+=amount*10;tone(e.hp?120:75,.09,'sawtooth');
-  if(e.hp===0){e.dead=.5;if(e.type!==3&&!e.removed)pickups.push({x:e.x,y:FLOOR-20,kind:'energy',life:16});else{world.cleared=true;bolts=[];toast('Phage defeated — the cell is recovering');}}
+  if(e.hp===0){combatKill(e);e.dead=.5;if(e.type!==3&&!e.removed)pickups.push({x:e.x,y:FLOOR-20,kind:'energy',life:16});else{world.cleared=true;bolts=[];toast('Phage defeated — the cell is recovering');}}
 }
 function splitMutant(e){
  e.child=true;e.max=Math.ceil(e.max/2);e.hp=Math.min(e.hp,e.max);e.scale=.74;
@@ -202,7 +202,7 @@ function splitMutant(e){
  burst(e.x,e.y-20,'#c58cff',16);if(!world.splitTold){world.splitTold=true;toast('The mutated cell divided — finish them fast!');}
 }
 function releaseLatch(e){e.latched=false;if(player.latch===e)player.latch=null;e.x=clamp(e.x-player.face*44,35,world.length-35);e.y=FLOOR;e.state='recover';e.timer=.9;e.hurt=.25;burst(player.x,player.y-30,'#a8ffd9',10);}
-function damagePlayer(amount,sourceX){if(player.inv>0||player.dodge>0||mode!=='play')return;/* Rangers are invincible: learning, not reflexes, decides the mission. A hit still flashes and pushes back. */player.inv=.85;player.action=null;player.queue=false;player.vx=(player.x<sourceX?-1:1)*110;shake=4;burst(player.x,player.y-35,'#ff7999');tone(90,.12,'sawtooth');updateHUD();}
+function damagePlayer(amount,sourceX){if(player.inv>0||player.dodge>0||mode!=='play')return;/* Rangers are invincible: learning, not reflexes, decides the mission. A hit still flashes and pushes back. */combatHit(sourceX);player.inv=.85;player.action=null;player.queue=false;player.vx=(player.x<sourceX?-1:1)*110;shake=4;burst(player.x,player.y-35,'#ff7999');tone(90,.12,'sawtooth');updateHUD();}
 function terminal(){
  if(world.terminal.done||Math.abs(player.x-world.terminal.x)>70){if(world.style==='puzzle'&&!world.boss)carryInteract();return;}
  if(world.boss){
@@ -210,6 +210,7 @@ function terminal(){
   openMissionPuzzle(true);return;
  }
  if(world.cells.some(c=>!c.taken)){toast('Collect the three mission capsules first');return;}
+ const block=combatTerminalBlock();if(block){toast(block);return;}
  openMissionPuzzle();
 }
 function finishMission(){askQuestion(4,correct=>complete(correct));}
@@ -243,7 +244,7 @@ function step(dt){
  if(p.ground&&p.ride){p.x+=p.ride.dx||0;p.y+=p.ride.dy||0;}
  const diving=p.action?.kind==='dive';
  if(diving){if(p.action.time<DIVE_TUCK){p.vx=0;p.vy=-40;}else{p.vx=p.face*270;p.vy=660;}}
- else{const target=(p.dodge?p.face*360:direction*(p.action?30:152))*(p.latch?.55:1);const acceleration=p.ground?1500:700;p.vx+=clamp(target-p.vx,-acceleration*dt,acceleration*dt);}
+ else{const target=(p.dodge?p.face*360:direction*(p.action?30:152))*(p.latch?.55:1)*combatSpeed();const acceleration=p.ground?1500:700;p.vx+=clamp(target-p.vx,-acceleration*dt,acceleration*dt);}
  const oldX=p.x;p.x=blockByWalls(oldX,clamp(p.x+p.vx*dt,20,world.length-25),p.y);p.runClock+=Math.abs(p.vx)*dt/16;
  const oldY=p.y;if(!diving)p.vy+=950*dt;p.y+=p.vy*dt;p.ground=false;
  p.ride=null;for(const s of surfacesAt(p.x))if(p.vy>=0&&oldY<=Math.max(s.y,s.prev)+.5&&p.y>=s.y){p.y=s.y;p.vy=0;p.ground=true;p.ride=s.mover||null;break;}
@@ -271,6 +272,7 @@ function enemyStep(e,nx){if(world.gaps.some(([a,b])=>nx>a-18&&nx<b+18))return fa
 function updateEnemy(e,dt){
  e.clock+=dt;e.hurt=Math.max(0,e.hurt-dt);if(e.hp<=0){e.dead=Math.max(0,e.dead-dt);return;}
  if(e.drop<0){e.drop=Math.min(0,e.drop+520*dt);e.y=FLOOR+e.drop;if(!e.drop){burst(e.x,FLOOR-6,'#d0fff0',10);shake=Math.max(shake,2);}return;}
+ if(combatEnemy(e,dt))return;
  const fam=FAMILY[e.family]||{};
  if(e.latched){const p=player;e.x=p.x-p.face*10;e.y=p.y;e.drain=(e.drain||0)+dt;if(e.drain>1.5){e.drain=0;p.inv=0;damagePlayer(1,e.x);}return;}
  if(e.family==='radical'&&e.type!==2){e.y=FLOOR-18-Math.round(Math.sin(e.clock*3.3+e.home)*10+10);}
@@ -292,7 +294,7 @@ function updateEnemy(e,dt){
  }else if(e.state==='active'){
   if(e.attack==='charge'){enemyStep(e,e.x+e.face*210*(e.family==='misfolded'?.7:1)*dt);}
   if(!e.hit&&e.attack!=='spit'&&e.attack!=='blast'&&Math.abs(e.x-player.x)<(boss?125:55)&&Math.abs(e.y-player.y)<(boss?50:40)){const could=player.inv<=0&&player.dodge<=0;damagePlayer(boss?2:1,e.x);e.hit=true;
-   if(could&&e.family==='retrovirus'&&e.type===0&&!player.latch&&mode==='play'){e.latched=true;player.latch=e;e.drain=0;toast('A retrovirus latched on — attack or dodge to shake it off!');}}
+   if(could&&(e.family==='retrovirus'||combatMode()?.latch)&&e.type===0&&!player.latch&&mode==='play'){e.latched=true;player.latch=e;e.drain=0;toast('A '+(e.family==='radical'?'free radical':'retrovirus')+' latched on — attack or dodge to shake it off!');}}
   if(e.timer<=0){e.state='recover';e.timer=boss?1.1:.65;}
  }else if(e.state==='recover'&&e.timer<=0){e.state='approach';e.timer=boss?.65:.35;}
 }
@@ -313,12 +315,12 @@ function drawPlatform(x,y,w,base=false){x-=camera;rect('#0a182b',x,y,w,base?60:1
  if(!base){rect('#42657d',x+7,y+17,5,12);rect('#42657d',x+w-12,y+17,5,12);}}
 function draw(){
  if(!world||$('screen').hidden)return;ctx.imageSmoothingEnabled=false;ctx.save();ctx.clearRect(0,0,W,H);if(shake)ctx.translate(Math.round((Math.random()-.5)*shake),Math.round((Math.random()-.5)*shake));
- const bgW=H*environment.width/environment.height,offset=(camera*.26+zone*220)%bgW;ctx.drawImage(environment,-offset,0,bgW,H);ctx.drawImage(environment,bgW-offset,0,bgW,H);rect('#07152655',0,0,W,H);
+ const bgW=H*environment.width/environment.height,offset=(camera*.26+zone*220+(world.mode?.bgSpeed||0)*clock)%bgW;ctx.drawImage(environment,-offset,0,bgW,H);ctx.drawImage(environment,bgW-offset,0,bgW,H);rect('#07152655',0,0,W,H);
  // Fine drifting motes give depth without changing the collision surface.
  for(let i=0;i<24;i++){const x=((i*79-clock*(4+i%3)-camera*.12)%W+W)%W,y=70+(i*47)%210;rect(i%3?'#80d8d755':'#f9d98a77',x,y,1,1);}
- let from=0;for(const [a,b]of [...world.gaps,[world.length,world.length]]){if(a>camera&&from<camera+W)drawPlatform(Math.max(from,Math.floor(camera/32)*32),FLOOR,Math.min(a,camera+W+32)-Math.max(from,Math.floor(camera/32)*32),true);from=b;}
+ if(world.mode?.floor)world.mode.floor();else{let from=0;for(const [a,b]of [...world.gaps,[world.length,world.length]]){if(a>camera&&from<camera+W)drawPlatform(Math.max(from,Math.floor(camera/32)*32),FLOOR,Math.min(a,camera+W+32)-Math.max(from,Math.floor(camera/32)*32),true);from=b;}}
  for(const [x,w,y]of world.platforms)if(x+w>camera&&x<camera+W)drawPlatform(x,y,w);
- drawLevelBack();
+ drawLevelBack();drawCombat();
  world.cells.forEach((cell,i)=>{if(cell.taken||cell.hidden)return;const x=cell.x-camera,y=cell.y+Math.sin(clock*3+cell.x)*3;if(x<-40||x>W+40)return;const [name,icon]=MOLECULES[ranger.id][zone];
   ctx.fillStyle='#7cf7df22';ctx.beginPath();ctx.arc(x,y,17,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#9fffea';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(x,y,17+Math.sin(clock*4)*1.5,0,Math.PI*2);ctx.stroke();
   ctx.save();ctx.imageSmoothingEnabled=true;ctx.drawImage(moleculeIcon(icon,i),Math.round(x-17),Math.round(y-17));ctx.restore();text(name.toUpperCase(),x,y-24,8,'#d4fff1','center');});
@@ -340,7 +342,7 @@ function draw(){
  if(player.carry){ctx.save();ctx.imageSmoothingEnabled=true;ctx.drawImage(moleculeIcon(player.carry.key),Math.round(player.x-camera-17),Math.round(player.y-112+Math.sin(clock*6)*2));ctx.restore();}
  for(const b of bolts){const x=b.x-camera;rect(b.enemy?'#ee6fb7':'#48cde8',x-Math.sign(b.vx)*17,b.y-3,18,6);rect(b.enemy?'#ffd0ec':'#e1ffff',x-Math.sign(b.vx)*12,b.y-1,14,2);}
  for(const p of particles){ctx.globalAlpha=clamp(p.life/p.max,0,1);rect(p.color,p.x-camera,p.y,3,3);}ctx.globalAlpha=1;
- drawStamps();
+ drawStamps();drawCombatFront();
  if(comboCount>1)text(comboCount+' HIT',W-18,86,15,'#ffe1a1','right');
  if(world.boss){const boss=enemies[0];rect('#10172a',150,H-29,340,15);rect('#b63d73',154,H-25,332*boss.hp/boss.max,7);text('PHAGE',W/2,H-34,10,'#ffc0d8','center');}
  ctx.restore();

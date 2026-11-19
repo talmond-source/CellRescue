@@ -38,7 +38,7 @@ for(let i=0;i<14;i++){
  check(evaluate('frameForPlayer()')===14,'Visible firing pose');checks++;
  evaluate('player.action=null;player.inv=0;player.dodge=.2;damagePlayer(2,player.x+20)');check(evaluate('player.hp')===10,'Dodge grants invulnerability');checks++;
  for(let z=0;z<3;z++){
-  evaluate(`loadZone(${z});while(mode==='dialog')nextLine();world.cells.forEach(c=>c.taken=true);player.x=world.terminal.x;terminal();`);
+  evaluate(`loadZone(${z});while(mode==='dialog')nextLine();world.cells.forEach(c=>c.taken=true);if(world.mrna)world.mrna.delivered=true;player.x=world.terminal.x;terminal();`);
   check(evaluate('mode')==='task'&&evaluate('activeQuestion.index')===z,'Station opens its own bio-scan');checks++;
   if(z===1){evaluate('answer(wrong())');check(evaluate('!activeQuestion.solved && !world.terminal.done && $("feedback").className.includes("miss")'),'Wrong answer shows a hint and keeps the station locked');checks++;}
   evaluate('answer(activeQuestion.q.a);proceed()');
@@ -116,6 +116,25 @@ for(const r of ['ribosome','dna','mitosis','crispr','mito']){
  check(evaluate("ar.state==='done' && world.lock===null && !world.cells[0].hidden"),r+' arena clears and drops its molecule');checks++;
  check(evaluate("player.x>=ar.a && player.x<=ar.b"),r+' arena kept the Ranger inside');checks++;
 }
+// Combat zones with a job: a bot plays each new combat zone to the end.
+evaluate(`var combatBot=(id)=>{ranger=RANGERS.find(r=>r.id===id);selected=RANGERS.indexOf(ranger);startMission();loadZone(ZONE_STYLES[id].indexOf('combat'));while(mode==='dialog')nextLine();enemies=[];var log=[];
+ for(const ar of world.arenas){let n=0;
+  for(;n<12000&&ar.state!=='done';n++){
+   if(ar.state==='idle')player.x=Math.min(player.x+3,ar.a+150);
+   for(const e of enemies)if(e.hp>0&&e.drop===0&&!e.latched&&e.arena===ar&&n%20===0){e.hp=1;damageEnemy(e,9);}
+   if(world.freed&&world.freed.some(f=>f.arena===ar.index&&f.state==='follow'))player.x=world.docks[ar.index].x+10;
+   if(world.kinks&&world.kinks.some(k=>k.arena===ar.index)){const k=world.kinks.find(k=>k.arena===ar.index);player.x=k.x-30;player.face=1;if(!player.action)attack('melee');}
+   hitStop=0;player.inv=.6;player.y=FLOOR;step(1/60);taps.clear();}
+  log.push(ar.state);}
+ if(world.mrna)for(let n=0;n<8000&&!world.mrna.delivered;n++){player.x=Math.min(player.x+1.2,world.ribosomeX+40);hitStop=0;player.inv=1;player.y=FLOOR;step(1/60);taps.clear();}
+ world.cells.forEach(c=>c.taken=true);player.x=world.terminal.x;terminal();const ok=mode==='task';mode='play';return log.join()+(ok?' station':' blocked');};`);
+for(const id of ['atp','rougher','cytoplasm','membrane','golgi','dna','rna']){check(evaluate(`combatBot('${id}')`)==='done,done,done station',id+' combat zone can be played to the end');checks++;}
+evaluate(`ranger=RANGERS.find(r=>r.id==='atp');selected=RANGERS.indexOf(ranger);startMission();loadZone(ZONE_STYLES.atp.indexOf('combat'));while(mode==='dialog')nextLine();player.inv=0;player.dodge=0;damagePlayer(1,player.x+20);var c1=world.charge,s1=combatSpeed();var rad=makeEnemy(player.x+40,0);enemies=[rad];rad.hp=1;damageEnemy(rad,9);`);
+check(evaluate('c1<100 && s1<1 && world.charge>c1'),'Radicals steal electrons and slow you; beating one gives them back');checks++;
+evaluate(`ranger=RANGERS.find(r=>r.id==='cytoplasm');selected=RANGERS.indexOf(ranger);startMission();loadZone(ZONE_STYLES.cytoplasm.indexOf('combat'));while(mode==='dialog')nextLine();enemies=[];var ar=world.arenas[0];player.x=ar.a+150;for(let n=0;n<120;n++){hitStop=0;step(1/60);taps.clear();}var r0=run.retries,w0=ar.wave;guardsIn(ar)[0].value=0;step(1/60);`);
+check(evaluate("run.retries===r0+1 && ar.state==='fight' && !enemies.some(e=>e.arena===ar&&e.hp>0) && guardsIn(ar)[0].value>=70"),'A drained station rewinds the wave instead of ending the run');checks++;
+evaluate(`for(let n=0;n<240;n++){hitStop=0;step(1/60);taps.clear();}var thief=enemies.find(e=>e.arena===ar&&e.target&&e.hp>0);for(let n=0;n<600&&thief&&!thief.siph;n++){hitStop=0;player.inv=1;step(1/60);taps.clear();}`);
+check(evaluate('!!thief && thief.siph'),'Viruses walk to the reaction station and clamp on');checks++;
 // Puzzle zones: every room in every Ranger's puzzle zone can be solved, and wrong moves don't solve it.
 evaluate(`var puzzleReport=[];var solveRoomFully=(room)=>{let guard=0;
  if(room.kind==='sequence'){const wrong=room.switches.find(s=>s.value!==room.cfg.answer[0]);if(wrong){pressSwitch(room,wrong);if(room.pos!==0)puzzleReport.push(ranger.id+' wrong advanced');}

@@ -120,9 +120,11 @@ for(const r of ['ribosome','dna','mitosis','crispr','mito']){
 evaluate(`var puzzleReport=[];var solveRoomFully=(room)=>{let guard=0;
  if(room.kind==='sequence'){const wrong=room.switches.find(s=>s.value!==room.cfg.answer[0]);if(wrong){pressSwitch(room,wrong);if(room.pos!==0)puzzleReport.push(ranger.id+' wrong advanced');}
   while(!room.solved&&guard++<20){const s=room.switches.find(s=>s.value===room.cfg.answer[room.pos]);if(!s){puzzleReport.push(ranger.id+' no switch for '+room.cfg.answer[room.pos]);break;}pressSwitch(room,s);updateRoom(room,.5);}}
- if(room.kind==='carry'){while(!room.solved&&guard++<40){
-  if(!player.carry){const item=world.items.find(it=>it.room===room.r);const d=room.dispensers[0];player.x=item?item.x:d.x;carryInteract();}
-  else{const m=room.machines.find(m=>m.accept[player.carry.key]);if(!m){puzzleReport.push(ranger.id+' nowhere to put '+player.carry.key);break;}player.x=m.x;carryInteract();}}}
+ if(room.kind==='carry'){const can=key=>room.machines.find(m=>{const r=m.accept[key];if(!r)return false;if(r.count&&m.need&&m.got>=m.need)return false;if(r.after&&!room.machines.find(x=>x.id===r.after)?.got)return false;return true;});
+  while(!room.solved&&guard++<60){
+   if(!player.carry){const item=world.items.find(it=>it.room===room.r&&can(it.key)),d=room.dispensers.find(d=>can(d.item));if(!item&&!d){puzzleReport.push(ranger.id+' room '+room.r+' stuck');break;}player.x=item?item.x:d.x;carryInteract();}
+   else{const m=can(player.carry.key);if(!m){puzzleReport.push(ranger.id+' nowhere to put '+player.carry.key);break;}player.x=m.x;carryInteract();}
+   if(room.motor&&room.count>=room.cfg.goal)for(let n=0;n<3000&&!room.solved;n++)updateRoom(room,1/30);}}
  if(room.kind==='meter'){const v=room.cfg.variant;
   if(v==='lift'){for(let n=0;n<120;n++){room.meter=100;updateLevel(1/60);}if(room.lift.y>room.cfg.ledge+30)puzzleReport.push(ranger.id+' lift too low');room.meter=0;}
   for(const s of room.switches){s.cool=0;pressSwitch(room,s);}if(room.meter<=0)puzzleReport.push(ranger.id+' pump did nothing');
@@ -135,15 +137,30 @@ evaluate(`var puzzleReport=[];var solveRoomFully=(room)=>{let guard=0;
 check(evaluate('puzzleReport.length')===0,'All 42 puzzle rooms solvable: '+evaluate('puzzleReport.join("; ")'));checks+=42;
 // The right answer is not parked in the same spot: across 30 set-ups of each sequence room it shows up in several positions,
 // and after a correct step the choices scramble (and never put the next answer under the switch just hit).
-evaluate(`var spread=[];for(const id of ['dna','rna','ribosome','mitosis','crispr']){for(let r=0;r<3;r++){const seen=new Set();for(let k=0;k<30;k++){const room={a:300,b:820,r,kind:'sequence',pos:0,flash:0};setupRoom(newZone('puzzle'),room,id);seen.add(room.switches.findIndex(s=>s.value===room.cfg.answer[0]));}spread.push(id+r+':'+seen.size);}}
+evaluate(`var spread=[];for(const id of ['dna','rna','ribosome','mitosis','crispr']){for(let r=0;r<3;r++){const kinds=PUZZLE_KIND[id];if(Array.isArray(kinds)&&kinds[r]!=='sequence')continue;const seen=new Set();let fixed=false;for(let k=0;k<30;k++){const room={a:300,b:820,r,kind:'sequence',pos:0,flash:0};setupRoom(newZone('puzzle'),room,id);fixed=room.cfg.fixed;seen.add(room.switches.findIndex(s=>s.value===room.cfg.answer[0]));}if(!fixed)spread.push(id+r+':'+seen.size);}}
  var room2={a:300,b:820,r:2,kind:'sequence',pos:0,flash:0,switches:[]};setupRoom(newZone('puzzle'),room2,'crispr');var hit=room2.switches.find(s=>s.value===room2.cfg.answer[0]),hitAt=room2.switches.indexOf(hit);pressSwitch(room2,hit);updateRoom(room2,.5);var nextAt=room2.switches.findIndex(s=>s.value===room2.cfg.answer[1]);`);
 check(evaluate("spread.every(x=>+x.split(':')[1]>=3)"),'Correct answers appear in at least 3 different positions: '+evaluate("spread.join(' ')"));checks++;
 check(evaluate("nextAt>=0 && nextAt!==hitAt && room2.switches.length===4"),'After a correct step the choices scramble and include the next answer');checks++;
-// Wrong deliveries are rejected with a reason.
-evaluate("ranger=RANGERS.find(r=>r.id==='cytoplasm');selected=RANGERS.indexOf(ranger);startMission();loadZone(ZONE_STYLES.cytoplasm.indexOf('puzzle'));while(mode==='dialog')nextLine();var rm=world.rooms[0];player.x=rm.dispensers[0].x;carryInteract();player.x=rm.machines.find(m=>m.id==='mito').x;carryInteract();");
-check(evaluate("player.carry.key==='glucose' && rm.count===0 && $('toast').textContent.includes('pyruvate')"),'Mitochondrion rejects glucose and explains why');checks++;
+// Wrong deliveries are rejected with a reason, and steps that need an earlier step wait for it.
+const zoneRoom=(id,r)=>`ranger=RANGERS.find(x=>x.id==='${id}');selected=RANGERS.indexOf(ranger);startMission();loadZone(ZONE_STYLES.${id}.indexOf('puzzle'));while(mode==='dialog')nextLine();var rm=world.rooms[${r}];`;
+evaluate(zoneRoom('mito',1)+"player.carry=null;var it=world.items.find(i=>i.room===1&&i.key==='nadh');player.x=it.x;carryInteract();player.x=rm.machines.find(m=>m.id==='etc').x;carryInteract();");
+check(evaluate("player.carry&&player.carry.key==='nadh' && rm.count===0 && $('toast').textContent.includes('oxygen')"),'Transport chain jams without oxygen and says why');checks++;
+evaluate("player.carry=null;player.x=rm.dispensers[0].x;carryInteract();player.x=rm.machines.find(m=>m.id==='o2').x;carryInteract();player.carry={key:'nadh'};player.x=rm.machines.find(m=>m.id==='etc').x;carryInteract();");
+check(evaluate("rm.count===1"),'Once oxygen is in place the chain accepts NADH');checks++;
+evaluate(zoneRoom('rougher',1)+"player.carry=null;var it=world.items.find(i=>i.room===1&&i.key==='ribosomeFree');player.x=it.x;carryInteract();player.x=rm.machines.find(m=>m.id==='dock').x;carryInteract();");
+check(evaluate("player.carry.key==='ribosomeFree' && $('toast').textContent.includes('signal')"),'ER dock turns away a ribosome with no signal sequence');checks++;
+evaluate(zoneRoom('lysosome',2)+"player.carry=null;var it=world.items.find(i=>i.room===2&&i.key==='oldProtein');player.x=it.x;carryInteract();player.x=rm.machines.find(m=>m.id==='ribo').x;carryInteract();");
+check(evaluate("player.carry.key==='oldProtein' && rm.count===0"),'Undigested parts cannot be recycled before the enzyme vat');checks++;
+evaluate(zoneRoom('cytoplasm',2)+"for(let n=0;n<900;n++)updateRoom(rm,1/30);var firstBreak=rm.machines[0].x;");
+check(evaluate("!rm.solved && rm.motor.x<firstBreak && rm.motor.blocked"),'The motor protein stops at a broken microtubule');checks++;
+evaluate(zoneRoom('rna',1)+"var exon=rm.switches.find(s=>!rm.cfg.answer.includes(s.value));pressSwitch(rm,exon);var intron=rm.switches.find(s=>rm.cfg.answer.includes(s.value));pressSwitch(rm,intron);");
+check(evaluate("rm.pos===1 && intron.cut && !exon.cut && rm.mistakes===1"),'Splicing: cutting an exon is a mistake, cutting the intron removes it');checks++;
+evaluate(zoneRoom('dna',2)+"var hits=rm.cfg.answer.slice().reverse().map(v=>rm.switches.find(s=>s.value===v));hits.forEach(s=>pressSwitch(rm,s));");
+check(evaluate("rm.solved && rm.mistakes===0"),'Proofreading: mismatches can be fixed in any order');checks++;
+evaluate(zoneRoom('crispr',0)+"var noPam=rm.switches.find(s=>s.value.split('|')[0]===rm.cfg.answer[0].split('|')[0]&&s.value!==rm.cfg.answer[0]);pressSwitch(rm,noPam);");
+check(evaluate("!!noPam && rm.pos===0 && rm.mistakes===1"),'CRISPR: a perfect match with no PAM is not cut');checks++;
 // Meter gate closes again as the gradient leaks.
-evaluate("ranger=RANGERS.find(r=>r.id==='mito');selected=RANGERS.indexOf(ranger);startMission();loadZone(ZONE_STYLES.mito.indexOf('puzzle'));while(mode==='dialog')nextLine();var mr=world.rooms[0];mr.meter=100;updateRoom(mr,0);var opened=mr.wall.open;for(let n=0;n<600;n++)updateRoom(mr,1/60);");
+evaluate("ranger=RANGERS.find(r=>r.id==='mito');selected=RANGERS.indexOf(ranger);startMission();loadZone(ZONE_STYLES.mito.indexOf('puzzle'));while(mode==='dialog')nextLine();var mr=world.rooms.find(r=>r.kind==='meter');mr.meter=100;updateRoom(mr,0);var opened=mr.wall.open;for(let n=0;n<600;n++)updateRoom(mr,1/60);");
 check(evaluate("opened && !mr.wall.open"),'ATP synthase door closes when the H⁺ gradient runs down');checks++;
 // Sequence switches respond to real punches.
 evaluate("ranger=RANGERS.find(r=>r.id==='dna');selected=RANGERS.indexOf(ranger);startMission();loadZone(0);while(mode==='dialog')nextLine();enemies=[];var dr=world.rooms[0];var target=dr.switches.find(s=>s.value===dr.cfg.answer[0]);player.x=target.x-30;player.face=1;player.action=null;attack('melee');for(let n=0;n<20;n++){hitStop=0;step(1/60);taps.clear();}");
@@ -164,7 +181,7 @@ evaluate("ranger=RANGERS.find(r=>r.id==='mito');selected=RANGERS.indexOf(ranger)
 check(evaluate("fr.y<FLOOR-10"),'Free radicals float');checks++;
 
 // Bots play the hardest meter rooms with real inputs and physics.
-evaluate(`var botResult={};var play=(id)=>{ranger=RANGERS.find(r=>r.id===id);selected=RANGERS.indexOf(ranger);startMission();loadZone(ZONE_STYLES[id].indexOf('puzzle'));while(mode==='dialog')nextLine();enemies=[];world.rooms[0].solved=world.rooms[1].solved=true;world.rooms[0].wall.open=world.rooms[1].wall.open=true;return world.rooms[2];};
+evaluate(`var botResult={};var play=(id)=>{ranger=RANGERS.find(r=>r.id===id);selected=RANGERS.indexOf(ranger);startMission();loadZone(ZONE_STYLES[id].indexOf('puzzle'));while(mode==='dialog')nextLine();enemies=[];const m=world.rooms.find(r=>r.kind==='meter');for(const r of world.rooms)if(r!==m){r.solved=true;r.wall.open=true;}if(m.r>0)player.x=m.a-60;return m;};
  var press=()=>{taps.add('KeyZ');};var frames=(n,fn)=>{for(let i=0;i<n&&mode==='play';i++){if(fn)fn(i);hitStop=0;player.hp=10;step(1/60);taps.clear();}};
  // Smooth ER: ride the lift, mash the lever, then jump onto the ledge
  let room=play('smoother');player.x=room.lift.x+35;player.y=room.lift.y;player.face=1;frames(30);
@@ -178,5 +195,5 @@ evaluate(`var botResult={};var play=(id)=>{ranger=RANGERS.find(r=>r.id===id);sel
  botResult.lysosome=room.solved;`);
 check(evaluate('botResult.smoother'),'Bot can climb the hardest calcium lift');checks++;
 check(evaluate('botResult.mito'),'Bot can run the hardest ATP synthase door');checks++;
-check(evaluate('botResult.lysosome'),'Bot can acidify the hardest lysosome chamber');checks++;
+check(evaluate('botResult.lysosome'),'Bot can acidify the lysosome acid chamber');checks++;
 console.log(JSON.stringify({checks,missions:14,result:'PASS'}));

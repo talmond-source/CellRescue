@@ -22,13 +22,15 @@ let shPointerOn=false;
 function shooterPointer(){if(shPointerOn||!canvas.addEventListener)return;shPointerOn=true;
  const at=e=>{const r=canvas.getBoundingClientRect();return {x:(e.clientX-r.left)/r.width*W,y:(e.clientY-r.top)/r.height*H};};
  canvas.addEventListener('pointermove',e=>{const s=world?.shooter;if(!s||mode!=='play')return;const p=at(e);s.aim.x=p.x;s.aim.y=p.y;s.pointer=true;});
- canvas.addEventListener('pointerdown',e=>{const s=world?.shooter;if(!s||mode!=='play')return;e.preventDefault();const p=at(e);s.aim.x=p.x;s.aim.y=p.y;s.pointer=true;shooterPress(s,true);});}
+ canvas.addEventListener('pointerdown',e=>{const s=world?.shooter;if(!s||mode!=='play')return;e.preventDefault();const p=at(e);s.aim.x=p.x;s.aim.y=p.y;s.pointer=true;s.held=true;shooterPress(s,true);});
+ for(const n of ['pointerup','pointercancel','pointerleave'])canvas.addEventListener(n,()=>{const s=world?.shooter;if(s)s.held=false;});}
 function shooterPress(s,byPointer){if(s.phase==='intro'||s.phase==='card'){s.def.begin(s);return;}if(s.phase==='station'){openMissionPuzzle();return;}if(s.def.press)s.def.press(s,byPointer);}
 
 function shooterStep(dt){const s=world.shooter;s.t+=dt;
  if(world.terminal.done){loadZone(zone+1);return;}
  // arrow keys / D-pad move the crosshair (the codon wheel uses them to pick instead)
- if(!s.def.keysPick||s.phase!=='build'){const mx=Number(keys.has('ArrowRight'))-Number(keys.has('ArrowLeft')),my=Number(keys.has('ArrowDown'))-Number(keys.has('ArrowUp'));if(mx||my){s.pointer=false;s.aim.x=clamp(s.aim.x+mx*330*dt,16,W-16);s.aim.y=clamp(s.aim.y+my*330*dt,30,H-20);}}
+ if(s.def.control){if(s.phase==='fight')s.def.control(s,dt);}
+ else if(!s.def.keysPick||s.phase!=='build'){const mx=Number(keys.has('ArrowRight'))-Number(keys.has('ArrowLeft')),my=Number(keys.has('ArrowDown'))-Number(keys.has('ArrowUp'));if(mx||my){s.pointer=false;s.aim.x=clamp(s.aim.x+mx*330*dt,16,W-16);s.aim.y=clamp(s.aim.y+my*330*dt,30,H-20);}}
  else s.def.keysPick(s,dt);
  if(taps.has('KeyZ')||taps.has('Space')||taps.has('KeyX')||(taps.has('KeyE')&&s.phase==='station'))shooterPress(s,false);
  s.def.update(s,dt);s.hudT=(s.hudT||0)-dt;if(s.hudT<=0){s.hudT=.25;updateHUD();}
@@ -51,8 +53,8 @@ function shooterDraw(){const s=world.shooter;s.def.draw(s);
  for(const p of particles){ctx.globalAlpha=clamp(p.life/p.max,0,1);rect(p.color,p.x,p.y,3,3);}ctx.globalAlpha=1;
  for(const f of s.fx)if(f.kind==='flash'){ctx.fillStyle=f.color;ctx.globalAlpha=.35*(1-f.t/f.dur);ctx.fillRect(0,0,W,H);ctx.globalAlpha=1;}
  // breaches and stage pips
- rect('#06101ecc',8,H-30,206,22);for(let i=0;i<3;i++){ctx.strokeStyle='#9fffea';ctx.lineWidth=2;ctx.beginPath();ctx.arc(22+i*20,H-19,6,0,7);ctx.stroke();if(world.cells[i]?.taken){ctx.fillStyle=ranger.color;ctx.fill();}}
- text('BREACH',92,H-15,8,'#ffb0c0');for(let i=0;i<3;i++)rect(i<s.breaches?'#ff2d55':'#26364f',140+i*22,H-23,16,8);
+ rect('#06101ecc',8,H-30,s.def.noBreach?72:206,22);for(let i=0;i<3;i++){ctx.strokeStyle='#9fffea';ctx.lineWidth=2;ctx.beginPath();ctx.arc(22+i*20,H-19,6,0,7);ctx.stroke();if(world.cells[i]?.taken){ctx.fillStyle=ranger.color;ctx.fill();}}
+ if(!s.def.noBreach){text('BREACH',92,H-15,8,'#ffb0c0');for(let i=0;i<3;i++)rect(i<s.breaches?'#ff2d55':'#26364f',140+i*22,H-23,16,8);}
  if(s.phase==='station'){shooterCard(['ALL THREE STAGES CLEAR','Fire, tap or press E to run the station bio-scan.'],'#9effc4');}
  if(world.rewind>0){world.rewind-=1/60;const k=world.rewind/1.4;ctx.fillStyle='rgba(20,10,40,'+(.35*k)+')';ctx.fillRect(0,0,W,H);text('◀◀ REWIND',W/2,H/2-30,22,'#ffffff','center');}}
 function shooterCard(lines,color,y=110){const w=Math.max(...lines.map((l,i)=>(i?7.2:10)*l.length))+40,h=30+lines.length*18;rect('#06101ef0',W/2-w/2,y,w,h);rect(color,W/2-w/2,y,w,3);lines.forEach((l,i)=>text(l,W/2,y+26+i*18,i?9:12,i?'#e8f6ff':color,'center'));}

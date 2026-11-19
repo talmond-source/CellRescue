@@ -7,7 +7,7 @@ const missionText = await fs.readFile(new URL('./missions.js', import.meta.url),
 const questionText = await fs.readFile(new URL('./questions.js', import.meta.url), 'utf8');
 const diagramText = await fs.readFile(new URL('./diagrams.js', import.meta.url), 'utf8');
 const moleculeText = await fs.readFile(new URL('./molecules.js', import.meta.url), 'utf8');
-const levelText = (await fs.readFile(new URL('./levels.js', import.meta.url), 'utf8'))+'\n'+(await fs.readFile(new URL('./combat.js', import.meta.url), 'utf8'))+'\n'+(await fs.readFile(new URL('./shooter.js', import.meta.url), 'utf8'));
+const levelText = (await fs.readFile(new URL('./levels.js', import.meta.url), 'utf8'))+'\n'+(await fs.readFile(new URL('./combat.js', import.meta.url), 'utf8'))+'\n'+(await fs.readFile(new URL('./shooter.js', import.meta.url), 'utf8'))+'\n'+(await fs.readFile(new URL('./topdown.js', import.meta.url), 'utf8'));
 const puzzleTestText = await fs.readFile(new URL('./verify-missions.js', import.meta.url), 'utf8');
 const verifyText = await fs.readFile(new URL('./verify.js', import.meta.url), 'utf8');
 new vm.Script(engineText);

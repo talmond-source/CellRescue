@@ -109,7 +109,7 @@ evaluate(`ranger=RANGERS.find(r=>r.id==='atp');selected=0;startMission();while(m
  keys.add('ArrowRight');for(let n=0;n<40;n++){step(1/60);taps.clear();}keys.clear();`);
 check(evaluate('player.y===lift.y1 && player.x>lift.x+lift.w'),'Lift carries the Ranger up to the ledge');checks++;
 // Combat zones: arenas lock, waves spawn from above, clearing all waves unlocks and drops a molecule.
-for(const r of ['nucleus','smoother','lysosome','crispr','mito']){
+for(const r of ['nucleus','crispr']){
  evaluate(`ranger=RANGERS.find(r=>r.id==='${r}');selected=RANGERS.indexOf(ranger);startMission();loadZone(ZONE_STYLES[ranger.id].indexOf('combat'));while(mode==='dialog')nextLine();enemies=[];var ar=world.arenas[0];player.x=ar.a+150;step(1/60);`);
  check(evaluate('world.lock===ar'),r+' arena locks');checks++;
  evaluate(`for(let n=0;n<2000&&ar.state==='fight';n++){for(const e of enemies)if(e.hp>0&&e.drop===0&&!e.latched){e.hp=1;damageEnemy(e,9);}hitStop=0;player.hp=10;player.inv=1;step(1/60);taps.clear();}`);
@@ -154,6 +154,24 @@ check(evaluate("WHEEL.aaOf('AUG')==='M' && WHEEL.aaOf('UGG')==='W' && WHEEL.aaOf
 check(evaluate("MISSILES.every(st=>st.every(v=>v[0]==='AUG' && WHEEL.aaOf(v.at(-1))==='*' && v.slice(0,-1).every(c=>WHEEL.aaOf(c)!=='*'))) && MISSILES.map(st=>st[0].slice(0,-1).map(WHEEL.aaOf).join('')).join()==='MTNK,MTNKCL,MTNKCLLQ'"),'Every missile mRNA starts with AUG, ends with one stop codon, and codes the real start of interferon-beta');checks++;
 evaluate(`ranger=RANGERS.find(r=>r.id==='mitosis');selected=RANGERS.indexOf(ranger);startMission();loadZone(ZONE_STYLES.mitosis.indexOf('combat'));while(mode==='dialog')nextLine();var s=world.shooter;shooterPress(s,false);for(let i=0;i<400;i++){hitStop=0;step(1/60);}var h=s.targets.find(t=>t.hp>0&&!t.tumor),m0=s.mistakes;s.targets=[h];var c=SHOOTERS.mitosis.center(h);s.aim.x=c[0];s.aim.y=c[1];shooterPress(s,false);`);
 check(evaluate("h.hp===1 && s.mistakes===m0+1"),'Lasering a healthy cell is a mistake and does not destroy it');checks++;
+// Top-down zones: bots play Lysosome, Smooth ER and Mitochondria through all three stages to the station.
+evaluate(`var tdBot=(id)=>{ranger=RANGERS.find(r=>r.id===id);selected=RANGERS.indexOf(ranger);startMission();loadZone(ZONE_STYLES[id].indexOf('combat'));while(mode==='dialog')nextLine();const s=world.shooter;let n=0;
+ while(s.stage<3&&n++<90000){
+  if(s.phase==='card'){shooterPress(s,false);}
+  else if(s.phase==='fight'&&s.p){const p=s.p;s.held=true;
+   if(id==='lysosome'){const threat=s.rivals.find(r=>r.gone<=0&&r.r>p.r*1.08&&Math.hypot(r.x-p.x,r.y-p.y)<p.r+r.r+50);
+    if(threat){s.aim.x=clamp(p.x+(p.x-threat.x)*3,20,W-20);s.aim.y=clamp(p.y+(p.y-threat.y)*3,50,H-20);}
+    else{const f=s.debris.filter(d=>d.r<p.r*.9).sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0]||s.rivals.find(r=>r.gone<=0&&r.r*1.08<p.r);if(f){s.aim.x=f.x;s.aim.y=f.y;}}}
+   if(id==='smoother'){const b=s.spreaders.find(b=>b.hp>0);if(b){s.aim.x=b.x;s.aim.y=b.y-10;}else{let best=-1,bd=1e9;for(let k=0;k<s.tiles.length;k++)if(s.tiles[k]>0){const tx=(k%TD_COLS)*TD_TILE+10,ty=TD_TOP+Math.floor(k/TD_COLS)*TD_TILE+10,d=Math.hypot(tx-p.x,ty-p.y);if(d<bd){bd=d;best=k;}}if(best>=0){s.aim.x=(best%TD_COLS)*TD_TILE+10;s.aim.y=TD_TOP+Math.floor(best/TD_COLS)*TD_TILE+10;}}}
+   if(id==='mito'){const v=s.vir.filter(v=>v.hp>0&&v.state!=='fly').sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0];if(v){s.aim.x=v.x;s.aim.y=v.y;}else s.held=false;}}
+  hitStop=0;step(1/60);}
+ s.held=false;const cells=world.cells.filter(c=>c.taken).length,ph=s.phase;shooterPress(s,false);const asked=mode==='task';mode='play';world.terminal.done=true;const z0=zone;step(1/60);
+ return [s.stage,ph,cells,asked,zone===z0+1,run.retries].join();};`);
+for(const id of ['lysosome','smoother','mito']){const r=evaluate(`tdBot('${id}')`);check(r.startsWith('3,station,3,true,true'),id+' top-down zone plays through three stages, the station and on to the next zone ('+r+')');checks++;}
+evaluate(`ranger=RANGERS.find(r=>r.id==='lysosome');selected=RANGERS.indexOf(ranger);startMission();loadZone(ZONE_STYLES.lysosome.indexOf('combat'));while(mode==='dialog')nextLine();var s=world.shooter;s.stage=1;shooterPress(s,false);var p=s.p,r0=p.r,big=s.debris.find(d=>d.size===2);big.x=p.x+5;big.y=p.y;s.rivals[0].x=p.x+400;s.rivals[1].x=p.x-300;step(1/60);var afterBig=s.debris.includes(big);var riv=s.rivals[0];riv.r=p.r*2;riv.x=p.x+4;riv.y=p.y;riv.gone=0;step(1/60);`);
+check(evaluate('afterBig && p.r<r0'),'Lysosome: too-big debris cannot be engulfed; a bigger lysosome fuses with you and takes half your load');checks++;
+evaluate(`ranger=RANGERS.find(r=>r.id==='mito');selected=RANGERS.indexOf(ranger);startMission();loadZone(ZONE_STYLES.mito.indexOf('combat'));while(mode==='dialog')nextLine();var s=world.shooter;shooterPress(s,false);var r0=run.retries;s.hacked=[true,true,true,true,false,false,false,false,false,false,false,false];step(1/60);`);
+check(evaluate('run.retries===r0+1 && s.hacked.every(h=>!h) && s.phase==="fight"'),'Mitochondria: four hacked sections rewinds the stage');checks++;
 // Puzzle zones: every room in every Ranger's puzzle zone can be solved, and wrong moves don't solve it.
 evaluate(`var puzzleReport=[];var solveRoomFully=(room)=>{let guard=0;
  if(room.kind==='sequence'){const wrong=room.switches.find(s=>s.value!==room.cfg.answer[0]);if(wrong){pressSwitch(room,wrong);if(room.pos!==0)puzzleReport.push(ranger.id+' wrong advanced');}

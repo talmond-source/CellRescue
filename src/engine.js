@@ -144,7 +144,7 @@ function loadZone(index){
   puzzle:'Three gates are sealed with biology locks. Solve each one to free a '+molecule+' molecule.'}[world.style];
  const lines=[['crispr',intro],[ranger.id,world.boss?'At half strength he will raise a shield. I’ll use the control station on the left to disable it, then finish the fight.':styleLine]];
  if(world.style==='puzzle')lines.push([ranger.id,world.rooms[0].cfg.line.replace(/\.$/,'')+'. '+(world.rooms[0].kind==='carry'?'E picks things up and uses machines.':world.rooms[0].kind==='sequence'?'I hit the switches with punches, kicks or dive kicks.':'I hit the switches with punches or kicks.')]);
- if(world.shooter)lines.push(['crispr','First-person mode! Aim with the mouse or the arrow keys and fire with a click or Z. On a touchscreen, just tap where you want to fire.']);
+ if(world.shooter)lines.push(['crispr',world.shooter.def.controls||'First-person mode! Aim with the mouse or the arrow keys and fire with a click or Z. On a touchscreen, just tap where you want to fire.']);
  else if(zone===0)lines.push(['crispr','Z chains two punches into a kick. Press Z in the air to slam down with a dive kick. X draws your blaster and C dodges. Press E at the station when you have all three molecules.']);
  if(zone===0&&!world.boss&&!world.shooter)lines.push(['crispr',FAMILY[ENEMY_FAMILY[ranger.id]].tip]);
  talk(lines,()=>mode='play');updateHUD();

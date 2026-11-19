@@ -54,76 +54,147 @@ function dgMarks(g, marks, anchors) {
 }
 function dgSeeded(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
 
-/* ---------- reusable cell parts ---------- */
+/* ---------- reusable cell parts ----------
+   Drawn to look like the real structures (as in a textbook illustration): double membranes where there are
+   two, cristae as folded shelves, the Golgi as curved flattened sacs, smooth ER as a mesh of tubes,
+   ribosomes as two lumpy subunits. Flat colors with soft shading; labels stay in the margins. */
+function dgRadial(g, x, y, r, inner, outer) { const gr = g.createRadialGradient(x - r * .3, y - r * .35, r * .1, x, y, r * 1.05); gr.addColorStop(0, inner); gr.addColorStop(1, outer); return gr; }
+function dgBlob(g, x, y, rx, ry, seed, wob = .06, n = 28) {
+ const R = dgSeeded(seed), ph = [R() * 6, R() * 6, R() * 6]; g.beginPath();
+ for (let i = 0; i <= n; i++) { const a = i / n * Math.PI * 2, k = 1 + wob * (Math.sin(a * 3 + ph[0]) * .6 + Math.sin(a * 5 + ph[1]) * .3 + Math.sin(a * 2 + ph[2]) * .5); g.lineTo(x + Math.cos(a) * rx * k, y + Math.sin(a) * ry * k); }
+ g.closePath();
+}
 function dgNucleus(g, x, y, rx, ry, o = {}) {
- dgEll(g, x, y, rx + 4, ry + 4, 0, null, DGC.nucEdge, 2.4);
- dgEll(g, x, y, rx, ry, 0, DGC.nuc, DGC.nucEdge, 2);
- if (o.pores !== false) for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2 + .3; const px = x + Math.cos(a) * (rx + 2), py = y + Math.sin(a) * (ry + 2); g.save(); g.translate(px, py); g.rotate(a); g.fillStyle = '#0d1d30'; g.fillRect(-3, -2.5, 6, 5); g.fillStyle = '#e4d0ff'; g.fillRect(-3, -3.6, 6, 1.4); g.fillRect(-3, 2.2, 6, 1.4); g.restore(); }
- const r = dgSeeded(7); g.save(); g.beginPath(); g.ellipse(x, y, rx - 4, ry - 4, 0, 0, Math.PI * 2); g.clip();
- for (let k = 0; k < (o.chromatin === false ? 0 : 10); k++) { let px = x + (r() - .5) * rx * 1.4, py = y + (r() - .5) * ry * 1.3; g.beginPath(); g.moveTo(px, py); for (let j = 0; j < 5; j++) { const cx2 = px + (r() - .5) * rx * .3, cy2 = py + (r() - .5) * ry * .3; px += (r() - .5) * rx * .32; py += (r() - .5) * ry * .3; g.quadraticCurveTo(cx2, cy2, px, py); } g.lineCap = 'round'; dgPath(g, null, o.hiChromatin ? '#7cf7df' : '#c9a8ff', o.hiChromatin ? 2.8 : 1.7); g.lineCap = 'butt'; }
+ const R = dgSeeded(Math.round(rx * 7 + ry * 3));
+ // nuclear envelope: two membranes with a thin space between them
+ dgEll(g, x, y, rx + 5, ry + 5, 0, '#5b3f96', '#d9c2ff', 1.6);
+ dgEll(g, x, y, rx + 1, ry + 1, 0, dgRadial(g, x, y, Math.max(rx, ry), '#4d3594', '#2a1b5c'), '#d9c2ff', 1.4);
+ // nuclear pores: channels through both membranes, ringed by the pore complex
+ if (o.pores !== false) for (let i = 0; i < 12; i++) {
+  const a = i / 12 * Math.PI * 2 + .26, px = x + Math.cos(a) * (rx + 3), py = y + Math.sin(a) * (ry + 3);
+  g.save(); g.translate(px, py); g.rotate(Math.atan2(Math.sin(a) * rx, Math.cos(a) * ry));
+  g.fillStyle = '#3a2770'; g.fillRect(-3.4, -2.6, 6.8, 5.2); dgRect(g, -4.4, -3.6, 2.4, 7.2, 1, '#f1e4ff'); dgRect(g, 2, -3.6, 2.4, 7.2, 1, '#f1e4ff'); g.restore();
+ }
+ g.save(); g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); g.clip();
+ if (o.chromatin !== false) {
+  const hi = o.hiChromatin, dark = hi ? '#7cf7df' : '#1a0f3c', lite = hi ? '#bffcf1' : '#9a7ee0';
+  // euchromatin: loosely packed DNA, a fine speckle
+  for (let i = 0; i < rx * ry / 26; i++) { const a = R() * 6.28, d = Math.sqrt(R()); g.fillStyle = lite; g.globalAlpha = .35 + R() * .3; g.fillRect(x + Math.cos(a) * d * rx, y + Math.sin(a) * d * ry, 1.3, 1.3); }
+  g.globalAlpha = 1;
+  // heterochromatin: tightly packed DNA in dark clumps, mostly against the envelope
+  const k0 = Math.max(10, Math.round((rx + ry) / 4)), sz = Math.max(3, Math.min(rx, ry) * .07);
+  for (let i = 0; i < k0; i++) { const a = R() * 6.28, edge = R() < .65, d = edge ? .88 + R() * .08 : .2 + R() * .5; const cx2 = x + Math.cos(a) * d * rx, cy2 = y + Math.sin(a) * d * ry, s = sz * (.7 + R() * .8);
+   g.save(); g.translate(cx2, cy2); g.rotate(edge ? a + Math.PI / 2 : R() * 3); dgBlob(g, 0, 0, s * (edge ? 2 : 1.2), s * .75, Math.floor(R() * 999), .3, 14); g.fillStyle = dark; g.globalAlpha = hi ? .95 : .7; g.fill(); g.restore(); g.globalAlpha = 1; }
+ }
  g.restore();
- if (o.nucleolus !== false) { dgCirc(g, x + rx * .28, y - ry * .18, Math.min(rx, ry) * .28, '#241447', '#8c6ad6', 1.5); }
+ if (o.nucleolus !== false) { const nr = Math.min(rx, ry) * .3, nx = x + rx * .26, ny = y - ry * .16; dgBlob(g, nx, ny, nr, nr * .92, 41, .08, 22); g.fillStyle = dgRadial(g, nx, ny, nr, '#3d2577', '#170c33'); g.fill(); g.strokeStyle = '#8c6ad6'; g.lineWidth = 1; g.stroke();
+  for (let i = 0; i < 26; i++) { const a = R() * 6.28, d = Math.sqrt(R()) * nr * .85; dgCirc(g, nx + Math.cos(a) * d, ny + Math.sin(a) * d, .9 + R() * .8, '#a88ae8'); } }
 }
-function dgRibo(g, x, y, s = 1) { dgCirc(g, x, y, 2.4 * s, DGC.ribo); }
+function dgRibo(g, x, y, s = 1) { dgCirc(g, x, y, 2.3 * s, DGC.ribo, '#6a1020', .6); }
+/* rough ER: stacked flattened sacs (cisternae) wrapping around the nucleus, studded with ribosomes */
 function dgRoughER(g, cx, cy, rIn, a0, a1, n = 3) {
+ const R = dgSeeded(Math.round(rIn * 13));
  for (let i = 0; i < n; i++) {
-  const r = rIn + i * 14; g.beginPath(); g.arc(cx, cy, r, a0, a1); g.arc(cx, cy, r + 7, a1, a0, true); g.closePath(); dgPath(g, DGC.rer, DGC.rerEdge, 1.6);
-  for (let a = a0 + .06; a < a1; a += .14) { dgRibo(g, cx + Math.cos(a) * (r + 10), cy + Math.sin(a) * (r + 10)); if (i === 0) dgRibo(g, cx + Math.cos(a + .07) * (r - 3), cy + Math.sin(a + .07) * (r - 3)); }
+  const r = rIn + i * 15, b0 = a0 + i * .05 + R() * .05, b1 = a1 - i * .04 - R() * .05, th = 3.6, steps = 46, wav = (a) => Math.sin(a * 9 + i) * 1.8;
+  const pt = (a, off) => [cx + Math.cos(a) * (r + wav(a) + off), cy + Math.sin(a) * (r + wav(a) + off)];
+  g.beginPath(); for (let k = 0; k <= steps; k++) { const p = pt(b0 + (b1 - b0) * k / steps, th); k ? g.lineTo(...p) : g.moveTo(...p); }
+  const e1 = pt(b1, 0); g.arc(e1[0], e1[1], th, b1, b1 + Math.PI);
+  for (let k = steps; k >= 0; k--) g.lineTo(...pt(b0 + (b1 - b0) * k / steps, -th));
+  const e0 = pt(b0, 0); g.arc(e0[0], e0[1], th, b0 + Math.PI, b0 + Math.PI * 2);
+  g.closePath(); dgPath(g, '#d9874a', '#ffbf8a', 1.4);
+  g.beginPath(); for (let k = 2; k <= steps - 2; k++) { const p = pt(b0 + (b1 - b0) * k / steps, 0); k > 2 ? g.lineTo(...p) : g.moveTo(...p); } dgPath(g, null, '#f6b27a', 1.2);
+  for (let a = b0 + .03; a < b1; a += .062) for (const side of [1, -1]) { if (R() < .18) continue; const p = pt(a + R() * .02, side * (th + 2.4)); dgRibo(g, p[0], p[1], .82); }
  }
 }
+/* smooth ER: a mesh of branching tubes, no ribosomes */
 function dgSmoothER(g, x, y, w, h) {
- const tubes = [[[0, .35], [.22, .08], [.48, .38], [.74, .12], [1, .32]], [[.02, .82], [.3, .62], [.56, .9], [.82, .66], [1, .86]], [[.22, .08], [.18, .45], [.3, .62]], [[.74, .12], [.7, .42], [.82, .66]], [[.48, .38], [.56, .9]]];
- const smooth = (pts) => { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length - 1; i++) g.quadraticCurveTo(pts[i][0], pts[i][1], (pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2); const L = pts[pts.length - 1]; g.lineTo(L[0], L[1]); };
- g.lineCap = 'round'; g.lineJoin = 'round';
- for (const t of tubes) { const pts = t.map(([a, b]) => [x + a * w, y + b * h]); smooth(pts); dgPath(g, null, DGC.serEdge, Math.max(7, h * .2)); }
- for (const t of tubes) { const pts = t.map(([a, b]) => [x + a * w, y + b * h]); smooth(pts); dgPath(g, null, DGC.ser, Math.max(4, h * .2 - 4)); }
- g.lineCap = 'butt'; g.lineJoin = 'miter';
+ const R = dgSeeded(Math.round(w * 3 + h * 7 + x)), cols = Math.max(4, Math.round(w / 25)), rows = Math.max(3, Math.round(h / 18)), t = Math.max(2.6, Math.min(5, Math.min(w, h) * .06));
+ const nodes = []; for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) nodes.push([x + (i + .5) / cols * w + (R() - .5) * w / cols * .95, y + (j + .5) / rows * h + (R() - .5) * h / rows * .95]);
+ const off = nodes.map(() => R() < .12), edges = []; for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) { const k = j * cols + i; if (off[k]) continue; if (i < cols - 1 && !off[k + 1] && R() < .62) edges.push([k, k + 1]); if (j < rows - 1 && !off[k + cols] && R() < .6) edges.push([k, k + cols]); if (i < cols - 1 && j < rows - 1 && !off[k + cols + 1] && R() < .2) edges.push([k, k + cols + 1]); if (i > 0 && j < rows - 1 && !off[k + cols - 1] && R() < .14) edges.push([k, k + cols - 1]); }
+ const bend = edges.map(() => (R() - .5) * 46);
+ const tube = (lw, col) => { g.strokeStyle = col; g.lineWidth = lw; g.lineCap = 'round'; for (const [n, [a, b]] of edges.entries()) { const [x1, y1] = nodes[a], [x2, y2] = nodes[b], mx = (x1 + x2) / 2 - (y2 - y1) * bend[n] / 60, my = (y1 + y2) / 2 + (x2 - x1) * bend[n] / 60; g.beginPath(); g.moveTo(x1, y1); g.quadraticCurveTo(mx, my, x2, y2); g.stroke(); } g.lineCap = 'butt'; };
+ tube(t + 3, '#8ff5e8'); tube(t, '#1f9b90'); tube(Math.max(1, t * .28), '#5fd6c8');
+ for (const [a] of edges) { const [nx, ny] = nodes[a]; dgCirc(g, nx, ny, t * .62, '#1f9b90'); }
 }
+/* Golgi: a stack of curved, flattened sacs with swollen rims; vesicles bud from the edges */
 function dgGolgi(g, x, y, w, h) {
- for (let i = 0; i < 5; i++) {
-  const yy = y + i * h / 5, ww = w * (1 - Math.abs(i - 2) * .12), xx = x + (w - ww) / 2;
-  g.beginPath(); g.moveTo(xx, yy + 6); g.quadraticCurveTo(xx + ww / 2, yy - 6, xx + ww, yy + 6); g.lineTo(xx + ww, yy + 12); g.quadraticCurveTo(xx + ww / 2, yy, xx, yy + 12); g.closePath(); dgPath(g, DGC.golgi, DGC.golgiEdge, 1.5);
-  dgCirc(g, xx - 5, yy + 9, 4, DGC.golgi, DGC.golgiEdge, 1.2); dgCirc(g, xx + ww + 5, yy + 9, 4, DGC.golgi, DGC.golgiEdge, 1.2);
+ const n = 5, R = dgSeeded(Math.round(w + h * 3)), th = Math.max(4.5, h / n * .52), bow = Math.min(14, h * .16);
+ for (let i = 0; i < n; i++) {
+  const yy = y + (i + .5) * h / n, ww = w * (1 - Math.abs(i - 2) * .1), xx = x + (w - ww) / 2, col = ['#f2c44a', '#efb43c', '#e9a332', '#e59a2e', '#e08f2a'][i];
+  const curve = () => { g.beginPath(); g.moveTo(xx, yy + bow); g.quadraticCurveTo(xx + ww / 2, yy - bow, xx + ww, yy + bow); };
+  g.lineCap = 'round'; curve(); g.strokeStyle = '#fff0b0'; g.lineWidth = th + 2.6; g.stroke(); curve(); g.strokeStyle = col; g.lineWidth = th; g.stroke(); curve(); g.strokeStyle = '#fff2c4'; g.globalAlpha = .55; g.lineWidth = 1.1; g.stroke(); g.globalAlpha = 1; g.lineCap = 'butt';
+  for (const ex of [xx, xx + ww]) dgEll(g, ex, yy + bow, th * .62, th * .78, 0, col, '#fff0b0', 1.1);
+  if (R() < .55) dgVesicle(g, xx + ww + th * 1.5 + R() * 5, yy + bow - 3 + (R() - .5) * 6, th * .42);
+  if (R() < .3) dgVesicle(g, xx - th * 1.5 - R() * 4, yy + bow + (R() - .5) * 6, th * .4);
  }
+ dgVesicle(g, x + w * .5, y - th * .4, th * .7);
 }
+/* mitochondrion: outer membrane, inner membrane folded into cristae (shelves), granular matrix */
 function dgMito(g, x, y, w, h, rot = 0, o = {}) {
  g.save(); g.translate(x, y); g.rotate(rot);
- const t = Math.max(3, h * .06);
- dgRect(g, -w / 2, -h / 2, w, h, h / 2, o.worn ? '#8a7466' : DGC.mito, o.worn ? '#c8b3a3' : DGC.mitoEdge, 2);
- dgRect(g, -w / 2 + t, -h / 2 + t, w - 2 * t, h - 2 * t, (h - 2 * t) / 2, o.worn ? '#4b3c34' : DGC.mitoIn, o.worn ? '#a08d80' : '#f7b26a', Math.max(1.5, t * .7));
- g.save(); dgRect(g, -w / 2 + t, -h / 2 + t, w - 2 * t, h - 2 * t, (h - 2 * t) / 2); g.clip();
- const n = Math.max(3, Math.floor(w / 18)), fw = Math.max(2.5, w / n * .22);
+ const worn = o.worn, t = Math.max(2.6, h * .055), R = dgSeeded(Math.round(w * 5 + h));
+ const ims = worn ? '#b9a493' : '#f6b46e', edge = worn ? '#d8c6b8' : '#ffd2a0';
+ dgRect(g, -w / 2, -h / 2, w, h, h / 2, ims, edge, 1.8);
+ const iw = w - 2 * t, ih = h - 2 * t;
+ dgRect(g, -iw / 2, -ih / 2, iw, ih, ih / 2, worn ? '#5a4a40' : dgRadial(g, 0, 0, iw / 2, '#8a3c1c', '#5c230e'), worn ? '#a08d80' : '#ffb470', Math.max(1.2, t * .5));
+ g.save(); dgRect(g, -iw / 2, -ih / 2, iw, ih, ih / 2); g.clip();
+ // matrix: granules and a loop of mitochondrial DNA
+ for (let i = 0; i < w * h / 160; i++) dgCirc(g, (R() - .5) * iw, (R() - .5) * ih, .7 + R() * .6, worn ? '#7a6a60' : '#b05a30');
+ const n = Math.max(4, Math.round(Math.min(w / 10.5, 4 + w / 28))), fw = Math.max(1.5, Math.min(6, w / n * .2));
  for (let i = 0; i < n; i++) {
-  const xx = -w / 2 + h * .35 + i * (w - h * .7) / Math.max(1, n - 1), up = i % 2 === 0, y0 = up ? -h / 2 : h / 2, y1 = up ? h * .12 : -h * .12;
-  g.beginPath(); g.moveTo(xx - fw, y0); g.bezierCurveTo(xx - fw * 1.6, (y0 + y1) / 2, xx - fw * .4, y1, xx, y1); g.bezierCurveTo(xx + fw * .4, y1, xx + fw * 1.6, (y0 + y1) / 2, xx + fw, y0); g.closePath();
-  dgPath(g, o.worn ? '#a08d80' : '#f7b26a', null);
+  const xx = -iw / 2 + ih * .42 + i * (iw - ih * .84) / Math.max(1, n - 1) + (R() - .5) * fw * 2, top = i % 2 === 0, len = ih * (.36 + R() * .2), base = top ? -ih / 2 - 2 : ih / 2 + 2, tip = base + (top ? len : -len), tilt = (R() - .5) * fw * 3, mid = (base + tip) / 2, sw = (R() - .5) * fw * 1.6, e = top ? fw : -fw;
+  g.beginPath(); g.moveTo(xx - fw, base); g.quadraticCurveTo(xx - fw + sw, mid, xx - fw + tilt, tip - e); g.arc(xx + tilt, tip - e, fw, top ? Math.PI : 0, top ? 0 : Math.PI, true); g.quadraticCurveTo(xx + fw + sw, mid, xx + fw, base); g.closePath();
+  dgPath(g, ims, worn ? '#a08d80' : '#ffb470', Math.max(1, t * .45));
  }
+ if (!worn && w > 120) { g.beginPath(); g.ellipse(-iw * .18, ih * .04, h * .06, h * .045, .4, 0, 7); dgPath(g, null, '#ffe3c9', 1.1); for (let i = 0; i < 10; i++) dgCirc(g, (R() - .5) * iw * .8, (R() - .5) * ih * .5, 1.5, '#ff7a8a'); }
  g.restore(); g.restore();
 }
 function dgLyso(g, x, y, r, o = {}) {
- dgCirc(g, x, y, r, DGC.lyso, DGC.lysoEdge, 2);
- const rr = dgSeeded(r * 13); for (let i = 0; i < Math.max(3, r / 3); i++) { const a = rr() * 6.28, d = rr() * r * .65; dgCirc(g, x + Math.cos(a) * d, y + Math.sin(a) * d, Math.max(1.4, r * .09), '#ffd0dc'); }
+ dgCirc(g, x, y, r, dgRadial(g, x, y, r, '#b04466', '#6a1d38'), '#ff9ab8', Math.max(1.4, r * .07));
+ const rr = dgSeeded(Math.round(r * 13 + x));
+ for (let i = 0; i < Math.max(4, r * .7); i++) { const a = rr() * 6.28, d = Math.sqrt(rr()) * r * .72; dgCirc(g, x + Math.cos(a) * d, y + Math.sin(a) * d, Math.max(1, r * (.05 + rr() * .07)), rr() < .5 ? '#ffd0dc' : '#3d0d1f'); }
+ g.globalAlpha = .45; dgCirc(g, x - r * .35, y - r * .4, r * .22, '#ffd6e2'); g.globalAlpha = 1;
 }
-function dgVesicle(g, x, y, r, fill = DGC.golgi, edge = DGC.golgiEdge) { dgCirc(g, x, y, r, fill, edge, 1.6); }
+function dgVesicle(g, x, y, r, fill = DGC.golgi, edge = DGC.golgiEdge) { dgCirc(g, x, y, r, fill === DGC.golgi ? dgRadial(g, x, y, r, '#ffe08a', '#d59a26') : fill, edge, Math.max(1, r * .14)); if (r > 6) { g.globalAlpha = .5; dgCirc(g, x - r * .35, y - r * .35, r * .25, '#fff6d8'); g.globalAlpha = 1; } }
+/* ribosome: a large and a small subunit, each a lumpy mass of rRNA and protein */
+function dgRibosome(g, x, y, s = 1, o = {}) {
+ const big = (cx, cy, rx, ry, seed, c0, c1) => { dgBlob(g, cx, cy, rx, ry, seed, .07, 30); g.fillStyle = dgRadial(g, cx, cy, Math.max(rx, ry), c0, c1); g.fill(); g.strokeStyle = '#ff9aaa'; g.lineWidth = 2; g.stroke(); };
+ big(x, y - 30 * s, 64 * s, 42 * s, 5, '#d4566a', '#8f2638');
+ big(x, y + 18 * s, 54 * s, 16 * s, 9, '#ee8090', '#b8384d');
+ const R = dgSeeded(17); for (let i = 0; i < 40; i++) { const a = R() * 6.28, d = Math.sqrt(R()); dgCirc(g, x + Math.cos(a) * d * 56 * s, y - 30 * s + Math.sin(a) * d * 36 * s, 1 + R(), '#ff9aaa66'); }
+}
 function dgTRNA(g, x, y, anti, aa, s = 1) {
- // simplified tRNA (cloverleaf body) standing on the mRNA, anticodon at the bottom, amino acid on top
+ // tRNA cloverleaf: anticodon loop at the bottom, two side loops, acceptor stem on top holding the amino acid
  g.save(); g.translate(x, y); g.scale(s, s);
- g.beginPath(); g.moveTo(-14, 0); g.lineTo(-14, -26); g.quadraticCurveTo(-34, -30, -32, -46); g.quadraticCurveTo(-22, -58, -10, -48); g.lineTo(-8, -66); g.lineTo(8, -66); g.lineTo(10, -48); g.quadraticCurveTo(22, -58, 32, -46); g.quadraticCurveTo(34, -30, 14, -26); g.lineTo(14, 0); g.closePath(); dgPath(g, '#3b2a6e', '#b99cff', 2);
- dgLine(g, [[0, -66], [0, -78]], '#b99cff', 3);
+ const strand = '#c4a6ff', rung = '#efe6ff', body = '#3b2a6e';
+ g.beginPath(); g.moveTo(-16, -4); g.lineTo(-16, -28); g.quadraticCurveTo(-46, -26, -48, -44); g.quadraticCurveTo(-46, -62, -20, -52); g.lineTo(-9, -60); g.lineTo(-9, -76); g.lineTo(9, -76); g.lineTo(9, -60); g.lineTo(20, -52); g.quadraticCurveTo(46, -62, 48, -44); g.quadraticCurveTo(46, -26, 16, -28); g.lineTo(16, -4); g.closePath(); dgPath(g, body, null);
+ const stem = (x1, y1, x2, y2, gap = 5) => { const a = Math.atan2(y2 - y1, x2 - x1), nx = -Math.sin(a) * gap, ny = Math.cos(a) * gap; dgLine(g, [[x1 + nx, y1 + ny], [x2 + nx, y2 + ny]], strand, 2.2); dgLine(g, [[x1 - nx, y1 - ny], [x2 - nx, y2 - ny]], strand, 2.2); const L = Math.hypot(x2 - x1, y2 - y1); for (let k = 4; k < L; k += 5) { const px = x1 + Math.cos(a) * k, py = y1 + Math.sin(a) * k; dgLine(g, [[px + nx, py + ny], [px - nx, py - ny]], rung, 1); } };
+ stem(0, -8, 0, -30, 6); stem(-8, -40, -28, -42); stem(8, -40, 28, -42); stem(0, -50, 0, -76, 5);
+ for (const [lx, ly, lr] of [[-38, -43, 8], [38, -43, 8]]) { dgCirc(g, lx, ly, lr, null, strand, 2); for (let k = 0; k < 7; k++) { const a = k / 7 * Math.PI * 2; dgCirc(g, lx + Math.cos(a) * lr, ly + Math.sin(a) * lr, 1.3, rung); } }
+ dgCirc(g, 0, -40, 8, body, strand, 1.6);
+ dgLine(g, [[5, -76], [5, -82], [0, -86]], strand, 2.2); dgText(g, 'CCA', 15, -82, 6.5, '#d9c8ff', 'left', 700);
  g.restore();
  const letters = String(anti || '').split('');
  letters.forEach((b, i) => { const bx = x + (i - 1) * 13 * s; dgRect(g, bx - 6 * s, y - 2, 12 * s, 14 * s, 2, BASE_COL[b] || BASE_COL['?'], '#0b1424', 1); dgText(g, b, bx, y + 5 * s, 10 * s, '#fff', 'center', 800); });
- if (aa) { dgCirc(g, x, y - 88 * s, 13 * s, '#ffd36b', '#7a5a10', 2); dgText(g, aa, x, y - 88 * s, 9.5 * s, '#2b1d04', 'center', 800); }
+ if (aa) { dgCirc(g, x, y - 96 * s, 13 * s, '#ffd36b', '#7a5a10', 2); dgText(g, aa, x, y - 96 * s, 9.5 * s, '#2b1d04', 'center', 800); }
 }
 function dgBases(g, seq, x, y, w = 22, h = 22, gap = 3, label = true) {
  seq.split('').forEach((b, i) => { const bx = x + i * (w + gap); dgRect(g, bx, y, w, h, 3, BASE_COL[b] || BASE_COL['?'], '#0b1424', 1.2); if (label) dgText(g, b, bx + w / 2, y + h / 2 + .5, Math.min(14, h * .62), b === '?' ? '#ffd36b' : '#fff', 'center', 850); });
 }
 function dgPhospholipid(g, x, y, up = true, s = 1) {
- const d = up ? 1 : -1; dgLine(g, [[x - 2.5 * s, y], [x - 3.5 * s, y + d * 9 * s], [x - 2 * s, y + d * 17 * s]], DGC.lipidTail, 1.8 * s); dgLine(g, [[x + 2.5 * s, y], [x + 1.5 * s, y + d * 9 * s], [x + 3 * s, y + d * 17 * s]], DGC.lipidTail, 1.8 * s);
- dgCirc(g, x, y, 5.2 * s, DGC.lipidHead, '#9c4f73', 1);
+ const d = up ? 1 : -1; dgLine(g, [[x - 2.5 * s, y], [x - 3.5 * s, y + d * 9 * s], [x - 2 * s, y + d * 17 * s]], DGC.lipidTail, 1.8 * s); dgLine(g, [[x + 2.5 * s, y], [x + 1.5 * s, y + d * 6 * s], [x + 4.5 * s, y + d * 10 * s], [x + 3 * s, y + d * 17 * s]], DGC.lipidTail, 1.8 * s);
+ dgCirc(g, x, y, 5.2 * s, dgRadial(g, x, y, 5.2 * s, '#ffd0e2', '#e77aa6'), '#9c4f73', 1);
 }
 function dgBilayer(g, x0, x1, yTop, gapAt) {
  for (let x = x0; x <= x1; x += 12) { if (gapAt && gapAt.some(([a, b]) => x > a - 6 && x < b + 6)) continue; dgPhospholipid(g, x, yTop, true); dgPhospholipid(g, x, yTop + 46, false); }
+}
+/* membrane proteins: a bundle of helices spanning the bilayer; a channel has a pore down the middle, a pump has a motor domain inside */
+function dgMembraneProtein(g, cx, top, kind = 'channel') {
+ const pump = kind === 'pump', c0 = pump ? '#b48cff' : '#6aa8f0', c1 = pump ? '#6e46c8' : '#2f6fc0', edge = pump ? '#e3d6ff' : '#cfe6ff';
+ const hel = (x, y0, y1, w) => { dgRect(g, x - w / 2, y0, w, y1 - y0, w / 2, dgRadial(g, x, (y0 + y1) / 2, w, c0, c1), edge, 1.4); for (let yy = y0 + 6; yy < y1 - 4; yy += 7) dgLine(g, [[x - w / 2 + 2, yy], [x + w / 2 - 2, yy + 3]], '#ffffff33', 1.2); };
+ if (pump) { dgBlob(g, cx, top + 74, 30, 16, 3, .1); g.fillStyle = dgRadial(g, cx, top + 74, 30, c0, c1); g.fill(); g.strokeStyle = edge; g.lineWidth = 1.4; g.stroke(); }
+ hel(cx - 19, top - 16, top + 64, 12); hel(cx + 19, top - 16, top + 64, 12); hel(cx - 7, top - 20, top + 66, 11); hel(cx + 7, top - 20, top + 66, 11);
+ if (!pump) { dgRect(g, cx - 3.5, top - 18, 7, 82, 3.5, '#0d2a4a'); }
 }
 function dgGlucose(g, x, y, r = 7, fill = '#ffe27a') {
  g.beginPath(); for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 + Math.PI / 6; g.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); } g.closePath(); dgPath(g, fill, '#7a5b10', 1.2);
@@ -131,59 +202,74 @@ function dgGlucose(g, x, y, r = 7, fill = '#ffe27a') {
 function dgPhage(g, x, y, s = 1, angle = 0) {
  g.save(); g.translate(x, y); g.rotate(angle); g.scale(s, s);
  g.beginPath(); for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; g.lineTo(Math.cos(a) * 16, -40 + Math.sin(a) * 19); } g.closePath(); dgPath(g, '#a9e3d2', '#e8fff8', 1.6);
+ dgLine(g, [[-16, -40], [16, -40]], '#e8fff8', 1); dgLine(g, [[-8, -56], [8, -24]], '#e8fff866', 1);
  dgRect(g, -5, -22, 10, 30, 2, '#8fa6b0', '#dbe8ee', 1.2); for (let i = 0; i < 6; i++) dgLine(g, [[-5, -18 + i * 5], [5, -18 + i * 5]], '#5d7480', 1);
  dgRect(g, -10, 8, 20, 4, 1, '#dbe8ee'); for (const sx of [-1, 1]) for (const k of [0, 1]) dgLine(g, [[sx * (4 + k * 4), 12], [sx * (14 + k * 8), 24], [sx * (12 + k * 10), 36]], '#dbe8ee', 1.4);
  g.restore();
 }
+/* a duplicated chromosome: two sister chromatids joined at the centromere */
 function dgChromosome(g, x, y, s = 1, color = '#ff8fd0', rot = 0, single = false) {
  g.save(); g.translate(x, y); g.rotate(rot); g.lineCap = 'round';
- if (single) dgLine(g, [[0, -9 * s], [0, 9 * s]], color, 4 * s);
- else { dgLine(g, [[-6 * s, -10 * s], [0, 0], [-6 * s, 10 * s]], color, 4 * s); dgLine(g, [[6 * s, -10 * s], [0, 0], [6 * s, 10 * s]], color, 4 * s); dgCirc(g, 0, 0, 2.2 * s, '#fff2fb'); }
+ const arm = (pts, w) => { dgLine(g, pts, '#1a0f2a', w + 2.4); dgLine(g, pts, color, w); dgLine(g, pts.map(([a, b]) => [a - w * .18, b]), '#ffffff55', w * .3); };
+ if (single) arm([[0, -10 * s], [0, 10 * s]], 4.2 * s);
+ else { arm([[-6.5 * s, -11 * s], [-1.6 * s, 0], [-6.5 * s, 11 * s]], 4.2 * s); arm([[6.5 * s, -11 * s], [1.6 * s, 0], [6.5 * s, 11 * s]], 4.2 * s); dgCirc(g, 0, 0, 2.3 * s, '#fff2fb', '#1a0f2a', .8); }
  g.lineCap = 'butt'; g.restore();
 }
+function dgCentrosome(g, x, y, s = 1) { g.save(); g.translate(x, y); dgRect(g, -5 * s, -2 * s, 10 * s, 4 * s, 1.5, '#ffe7a0', '#7a5a10', .8); dgRect(g, -2 * s, -5 * s, 4 * s, 10 * s, 1.5, '#ffd36b', '#7a5a10', .8); g.restore(); }
 
 function dgMitosisCell(g, cx, cy, stage, r = 52) {
- const pink = '#ff8fd0', blue = '#8fd0ff';
-   if (stage === 'telophase') {
-    dgEll(g, cx - 28, cy, 42, 46, 0, '#1c4a5c', DGC.cytoEdge, 3); dgEll(g, cx + 28, cy, 42, 46, 0, '#1c4a5c', DGC.cytoEdge, 3); dgRect(g, cx - 6, cy - 34, 12, 68, 4, '#1c4a5c');
-    for (const s of [-1, 1]) { dgEll(g, cx + s * 34, cy, 18, 16, 0, '#3a2668', '#b48cff', 1.5); dgLine(g, [[cx + s * 34 - 8, cy - 4], [cx + s * 34 + 6, cy + 5]], pink, 2.4); dgLine(g, [[cx + s * 34 - 6, cy + 6], [cx + s * 34 + 7, cy - 6]], blue, 2.4); }
-    return;
-   }
-   const stretch = stage === 'anaphase' ? 1.18 : 1;
-   dgEll(g, cx, cy, r * stretch, r, 0, '#1c4a5c', DGC.cytoEdge, 3);
-   const L = cx - r * stretch + 10, R = cx + r * stretch - 10;
-   if (stage !== 'prophase') { dgCirc(g, L, cy, 3.5, '#ffe7a0'); dgCirc(g, R, cy, 3.5, '#ffe7a0'); }
-   if (stage === 'prophase') {
-    dgEll(g, cx, cy, r * .62, r * .56, 0, null, '#b48cff', 1.5, [4, 4]);
-    [[-14, -12, .4], [12, -16, -.6], [-10, 14, -.3], [16, 12, .8]].forEach(([dx, dy, rot], i) => dgChromosome(g, cx + dx, cy + dy, .9, i % 2 ? blue : pink, rot));
-    dgCirc(g, cx - 22, cy - r + 14, 3.5, '#ffe7a0'); dgCirc(g, cx - 8, cy - r + 10, 3.5, '#ffe7a0');
-   } else if (stage === 'metaphase') {
-    [-27, -9, 9, 27].forEach((dy, i) => { dgLine(g, [[L, cy], [cx - 6, cy + dy]], '#cfe3ff88', 1); dgLine(g, [[R, cy], [cx + 6, cy + dy]], '#cfe3ff88', 1); dgChromosome(g, cx, cy + dy, .85, i % 2 ? blue : pink, Math.PI / 2); });
-   } else if (stage === 'anaphase') {
-    [-24, -8, 8, 24].forEach((dy, i) => { const c = i % 2 ? blue : pink; for (const s of [-1, 1]) { const x = cx + s * r * .62; dgLine(g, [[s < 0 ? L : R, cy], [x, cy + dy * .8]], '#cfe3ff88', 1); g.save(); g.translate(x, cy + dy * .8); g.lineCap = 'round'; dgLine(g, [[-s * 9, -5], [0, 0], [-s * 9, 5]], c, 3.2); g.restore(); } });
-   }
-  }
+ const pink = '#ff8fd0', blue = '#8fd0ff', cyto = (x, y, rx, ry) => dgEll(g, x, y, rx, ry, 0, dgRadial(g, x, y, Math.max(rx, ry), '#26627a', '#173f52'), DGC.cytoEdge, 3);
+ const fibers = (px, py, tx, ty) => dgLine(g, [[px, py], [tx, ty]], '#cfe3ffaa', 1);
+ const aster = (px, py, dir) => { for (let k = -2; k <= 2; k++) { const a = (dir < 0 ? Math.PI : 0) + Math.PI + k * .35; dgLine(g, [[px, py], [px + Math.cos(a) * 11, py + Math.sin(a) * 11]], '#ffe7a088', 1); } dgCentrosome(g, px, py, .8); };
+ if (stage === 'telophase') {
+  g.save(); g.beginPath(); g.ellipse(cx - 28, cy, 42, 46, 0, 0, 7); g.ellipse(cx + 28, cy, 42, 46, 0, 0, 7); g.fillStyle = dgRadial(g, cx, cy, 60, '#26627a', '#173f52'); g.fill(); g.restore();
+  dgEll(g, cx - 28, cy, 42, 46, 0, null, DGC.cytoEdge, 3); dgEll(g, cx + 28, cy, 42, 46, 0, null, DGC.cytoEdge, 3); dgRect(g, cx - 7, cy - 30, 14, 60, 4, '#1f5266');
+  for (const s2 of [-1, 1]) { dgEll(g, cx + s2 * 36, cy, 17, 15, 0, dgRadial(g, cx + s2 * 36, cy, 17, '#4d3594', '#2a1b5c'), '#d9c2ff', 1.4); g.lineCap = 'round'; dgLine(g, [[cx + s2 * 36 - 8, cy - 4], [cx + s2 * 36 + 6, cy + 5]], pink, 2.4); dgLine(g, [[cx + s2 * 36 - 6, cy + 6], [cx + s2 * 36 + 7, cy - 6]], blue, 2.4); g.lineCap = 'butt'; }
+  dgText(g, '⟩⟨', cx, cy - 34, 10, '#ff8fd0', 'center', 800);
+  return;
+ }
+ const stretch = stage === 'anaphase' ? 1.18 : 1, L = cx - r * stretch + 11, R = cx + r * stretch - 11;
+ cyto(cx, cy, r * stretch, r);
+ if (stage === 'prophase') {
+  dgEll(g, cx, cy, r * .62, r * .56, 0, '#3a2a6a55', '#d9c2ff', 1.5, [5, 4]);
+  [[-14, -12, .4], [12, -16, -.6], [-10, 14, -.3], [16, 12, .8]].forEach(([dx, dy, rot], i) => dgChromosome(g, cx + dx, cy + dy, .85, i % 2 ? blue : pink, rot));
+  for (const [ax, ay] of [[cx - 20, cy - r + 13], [cx - 6, cy - r + 10]]) { dgCentrosome(g, ax, ay, .75); }
+  dgLine(g, [[cx - 20, cy - r + 13], [cx - 6, cy - r + 10]], '#cfe3ff88', 1);
+ } else if (stage === 'metaphase') {
+  [-27, -9, 9, 27].forEach((dy, i) => { fibers(L, cy, cx - 6, cy + dy); fibers(R, cy, cx + 6, cy + dy); dgChromosome(g, cx, cy + dy, .82, i % 2 ? blue : pink, Math.PI / 2); });
+  aster(L, cy, -1); aster(R, cy, 1);
+ } else if (stage === 'anaphase') {
+  [-24, -8, 8, 24].forEach((dy, i) => { const c = i % 2 ? blue : pink; for (const s2 of [-1, 1]) { const x = cx + s2 * r * .6; fibers(s2 < 0 ? L : R, cy, x, cy + dy * .8); g.save(); g.translate(x, cy + dy * .8); g.lineCap = 'round'; dgLine(g, [[-s2 * 9, -5], [0, 0], [-s2 * 9, 5]], '#1a0f2a', 5.4); dgLine(g, [[-s2 * 9, -5], [0, 0], [-s2 * 9, 5]], c, 3.2); g.restore(); } });
+  aster(L, cy, -1); aster(R, cy, 1);
+ }
+}
 
 /* ---------- the diagrams ---------- */
 const DIAGRAMS = {
  /* overview animal cell; o.marks = {A:'nucleus', ...}; o.highlight = 'cytoplasm' */
  cell(g, o) {
-  const cx = 320, cy = 136, rx = 212, ry = 106;
-  dgEll(g, cx, cy, rx, ry, 0, o.highlight === 'cytoplasm' ? '#246a73' : DGC.cyto, null);
-  if (o.highlight === 'cytoplasm') { dgEll(g, cx, cy, rx - 10, ry - 9, 0, null, '#7cf7df', 2, [6, 5]); }
-  dgEll(g, cx, cy, rx, ry, 0, null, DGC.cytoEdge, 5);
-  const r = dgSeeded(3); for (let i = 0; i < 46; i++) { const a = r() * 6.28, d = Math.sqrt(r()); const x = cx + Math.cos(a) * d * (rx - 16), y = cy + Math.sin(a) * d * (ry - 14); if (Math.hypot((x - 240) / 70, (y - 128) / 62) > 1.2) dgRibo(g, x, y, .8); }
-  dgNucleus(g, 240, 128, 58, 50);
-  dgRoughER(g, 240, 128, 70, -1.05, 1.05, 3);
-  dgSmoothER(g, 360, 188, 96, 34);
-  dgGolgi(g, 405, 66, 70, 52);
-  dgVesicle(g, 488, 86, 6); dgVesicle(g, 470, 128, 5);
-  dgMito(g, 150, 188, 74, 30, -.25); dgMito(g, 470, 172, 60, 26, .5);
-  dgLyso(g, 150, 78, 15); dgLyso(g, 494, 128, 11);
-  if (o.highlight === 'cytoplasm') dgText(g, 'shaded region', 120, 128, 11, '#7cf7df', 'center', 700);
+  const cx = 322, cy = 136, rx = 214, ry = 108, hl = o.highlight === 'cytoplasm', R = dgSeeded(3);
+  // the cell: a slightly irregular outline, cytoplasm, cytoskeleton fibers and free ribosomes
+  dgBlob(g, cx, cy, rx, ry, 12, .035, 72); g.fillStyle = dgRadial(g, cx, cy, rx, hl ? '#3a8f94' : '#21607a', hl ? '#215f6b' : '#133a4e'); g.fill();
+  g.save(); dgBlob(g, cx, cy, rx - 4, ry - 4, 12, .035, 72); g.clip();
+  g.globalAlpha = .28; for (let i = 0; i < 30; i++) { const a = R() * 6.28, L = 120 + R() * 160; g.beginPath(); g.moveTo(318, 212); g.quadraticCurveTo(318 + Math.cos(a + .3) * L * .5, 212 + Math.sin(a + .3) * L * .5, 318 + Math.cos(a) * L, 212 + Math.sin(a) * L); dgPath(g, null, '#9fe3ff', .8); } g.globalAlpha = 1;
+  for (let i = 0; i < 90; i++) { const a = R() * 6.28, d = Math.sqrt(R()), x = cx + Math.cos(a) * d * (rx - 14), y = cy + Math.sin(a) * d * (ry - 12); if (Math.hypot((x - 232) / 112, (y - 128) / 106) > 1 && !(x > 385 && x < 485 && y > 40 && y < 110)) dgRibo(g, x, y, .62); }
+  g.restore();
+  if (hl) { dgBlob(g, cx, cy, rx - 12, ry - 11, 12, .035, 72); dgPath(g, null, '#7cf7df', 2, [6, 5]); }
+  dgBlob(g, cx, cy, rx, ry, 12, .035, 72); dgPath(g, null, '#ff89bd', 5); dgBlob(g, cx, cy, rx - 3.5, ry - 3.5, 12, .035, 72); dgPath(g, null, '#ffd0e4', 1.1);
+  // organelles
+  dgSmoothER(g, 344, 166, 116, 44);
+  dgRoughER(g, 232, 128, 72, -1.12, 1.12, 3);
+  dgNucleus(g, 232, 128, 58, 50);
+  dgGolgi(g, 392, 44, 86, 60);
+  dgVesicle(g, 496, 82, 5.5); dgVesicle(g, 484, 112, 4.5); dgVesicle(g, 518, 100, 4);
+  dgMito(g, 140, 192, 80, 30, -.28); dgMito(g, 488, 170, 64, 25, .55); dgMito(g, 124, 120, 50, 21, 1.38);
+  dgLyso(g, 160, 62, 13); dgLyso(g, 508, 136, 9.5); dgLyso(g, 290, 226, 8.5);
+  dgCentrosome(g, 318, 212, 1.2);
+  if (hl) dgText(g, 'shaded region', 386, 136, 11, '#7cf7df', 'center', 700);
   dgMarks(g, o.marks, {
-   nucleus: [214, 110, 48, 96], roughER: [296, 58, 262, 16], smoothER: [400, 200, 592, 214], golgi: [440, 80, 592, 90],
-   mito: [150, 188, 48, 214], lysosome: [150, 78, 48, 36], cytoplasm: [140, 140, 48, 150], membrane: [530, 140, 592, 150]
+   nucleus: [214, 112, 48, 96], roughER: [316, 70, 262, 16], smoothER: [404, 190, 592, 214], golgi: [436, 72, 592, 90],
+   mito: [140, 192, 48, 214], lysosome: [160, 62, 48, 36], cytoplasm: [215, 210, 48, 232], membrane: [534, 140, 592, 150]
   });
   dgCaption(g, 'Animal cell (simplified, not to scale)');
  },
@@ -231,7 +317,7 @@ const DIAGRAMS = {
   if (o.at >= 0) {
    const x = x0 + o.at * (cw + 18) + 38;
    // ribosome: large subunit above, small below the mRNA
-   dgEll(g, x, my - 46, 92, 58, 0, '#b8384d', '#ff8a9a', 2.5); dgEll(g, x, my + 30, 78, 24, 0, '#d9566a', '#ff9aaa', 2.5);
+   dgRibosome(g, x, my, 1.35);
    dgBases(g, codons[o.at], x - 39, my, 24, 22, 2);
    if (o.trna) dgTRNA(g, x, my - 16, o.trna, o.aa, .95);
    if (o.chain && o.chain.length) {
@@ -250,7 +336,7 @@ const DIAGRAMS = {
    dgText(g, 'inside the ER (lumen)', 370, 200, 12, '#ffcfa6', 'center', 700);
    dgLine(g, [[30, 92], [610, 92]], '#c9b0ff', 2); dgText(g, 'mRNA', 40, 80, 11, '#c9b0ff', 'left', 700);
    [130, 290, 450].forEach((x, i) => {
-    dgEll(g, x, 104, 30, 16, 0, '#d9566a', '#ff9aaa', 2); dgEll(g, x, 80, 22, 13, 0, '#b8384d', '#ff8a9a', 2);
+    dgRibosome(g, x, 96, .42);
     g.beginPath(); g.moveTo(x, 118); for (let k = 0; k < 9; k++) g.lineTo(x + (k % 2 ? 7 : -7), 128 + k * 7 + i * 2); dgPath(g, null, '#ffd36b', 2.4);
    });
    dgLabel(g, '?', 130, 104, 70, 40, 'right', 18, '#ffd36b');
@@ -342,7 +428,7 @@ const DIAGRAMS = {
   const top = 98;
   if (o.mode === 'parts') {
    dgBilayer(g, 40, 600, top, [[300, 340]]);
-   dgRect(g, 296, top - 12, 48, 70, 12, DGC.protein, '#a8d4ff', 2); dgRect(g, 314, top - 12, 12, 70, 4, '#0d2a4a');
+   dgMembraneProtein(g, 320, top, 'channel');
    for (let i = 0; i < 9; i++) { dgCirc(g, 60 + i * 64, 50 + (i % 2) * 10, 3, '#7ab8ff'); dgCirc(g, 80 + i * 64, 196 + (i % 2) * 10, 3, '#7ab8ff'); }
    dgText(g, 'water outside the cell', 30, 28, 11, '#9fd0ff', 'left', 650); dgText(g, 'water inside the cell', 30, 240, 11, '#9fd0ff', 'left', 650);
    if (o.marks) dgMarks(g, o.marks, { head: [196, top, 196, 40], tails: [460, top + 24, 560, 24], protein: [330, top + 50, 400, 232] });
@@ -353,8 +439,8 @@ const DIAGRAMS = {
   const isPump = o.mode === 'pump', barrier = o.mode === 'barrier';
   dgBilayer(g, 40, 600, top, barrier ? [] : [[296, 344]]);
   if (!barrier) {
-   if (isPump) { dgRect(g, 292, top - 18, 56, 82, 16, DGC.pump, '#d7c2ff', 2); dgRect(g, 296, top + 76, 48, 22, 6, '#ffd84a', '#7a5a10', 1.5); dgText(g, 'ATP', 320, top + 87, 12, '#3a2a05', 'center', 850); dgArrow(g, 320, top + 76, 320, top + 66, '#ffd84a', 2); }
-   else { dgRect(g, 296, top - 12, 48, 70, 12, DGC.protein, '#a8d4ff', 2); dgRect(g, 314, top - 12, 12, 70, 4, '#0d2a4a'); }
+   if (isPump) { dgMembraneProtein(g, 320, top, 'pump'); dgRect(g, 296, top + 96, 48, 22, 6, '#ffd84a', '#7a5a10', 1.5); dgText(g, 'ATP', 320, top + 107, 12, '#3a2a05', 'center', 850); dgArrow(g, 320, top + 96, 320, top + 90, '#ffd84a', 2); }
+   else dgMembraneProtein(g, 320, top, 'channel');
   }
   dgText(g, 'OUTSIDE the cell', 40, 26, 12, '#9fd0ff', 'left', 800); dgText(g, 'INSIDE the cell', 40, 246, 12, '#9fd0ff', 'left', 800);
   if (barrier) {
@@ -412,7 +498,7 @@ const DIAGRAMS = {
    g.fillStyle = '#0d1d30'; g.fillRect(372, 176, 14, 14); dgLine(g, [[372, 175], [386, 175]], '#e4d0ff', 2.5); dgLine(g, [[372, 191], [386, 191]], '#e4d0ff', 2.5);
    g.beginPath(); g.moveTo(170, 160); g.quadraticCurveTo(240, 196, 300, 186); g.quadraticCurveTo(340, 180, 378, 183); dgPath(g, null, '#b67be9', 4);
    dgArrow(g, 378, 183, 478, 183, '#b67be9', 3);
-   dgEll(g, 528, 172, 36, 22, 0, '#b8384d', '#ff8a9a', 2); dgEll(g, 528, 192, 30, 10, 0, '#d9566a', '#ff9aaa', 2);
+   dgRibosome(g, 528, 184, .55);
    dgLabel(g, 'DNA (the gene)', 110, 129, 110, 82, 'center', 11); dgLabel(g, 'mRNA copy', 260, 192, 240, 236, 'center', 11); dgLabel(g, 'nuclear pore', 379, 192, 420, 240, 'left', 11); dgLabel(g, 'ribosome', 546, 160, 570, 110, 'center', 11);
    dgCaption(g, '');
    return;
@@ -425,7 +511,7 @@ const DIAGRAMS = {
  },
  smoothER(g, o) {
   if (o.mode === 'liver') {
-   dgRect(g, 70, 24, 500, 210, 30, DGC.cyto, DGC.cytoEdge, 4);
+   dgBlob(g, 320, 129, 250, 105, 21, .04, 64); g.fillStyle = dgRadial(g, 320, 129, 250, '#21607a', '#133a4e'); g.fill(); dgPath(g, null, DGC.cytoEdge, 4);
    dgNucleus(g, 160, 130, 46, 40, { pores: true });
    dgSmoothER(g, 230, 40, 140, 70); dgSmoothER(g, 250, 140, 160, 70); dgSmoothER(g, 400, 70, 140, 80);
    const pill = (x, y) => { dgRect(g, x - 12, y - 6, 24, 12, 6, '#ff7a7a', '#ffd0d0', 1.2); dgRect(g, x, y - 6, 12, 12, 0, '#f2f2f2'); dgRect(g, x - 12, y - 6, 24, 12, 6, null, '#ffd0d0', 1.2); };
@@ -467,7 +553,7 @@ const DIAGRAMS = {
    return;
   }
   if (o.mode === 'burst') {
-   dgRect(g, 30, 20, 580, 230, 30, DGC.cyto, DGC.cytoEdge, 4);
+   dgBlob(g, 320, 135, 290, 115, 33, .035, 64); g.fillStyle = dgRadial(g, 320, 135, 290, '#21607a', '#133a4e'); g.fill(); dgPath(g, null, DGC.cytoEdge, 4);
    dgMito(g, 140, 80, 90, 36, -.2); dgMito(g, 470, 190, 90, 36, .3); dgNucleus(g, 480, 80, 60, 46);
    g.beginPath(); g.arc(300, 150, 46, .4, 5.6); dgPath(g, DGC.lyso, DGC.lysoEdge, 2.5);
    dgText(g, '!', 300, 150, 30, '#ffd36b', 'center', 900);
@@ -545,7 +631,7 @@ const DIAGRAMS = {
    return;
   }
   // trio: mRNA, tRNA, ribosome (rRNA)
-  dgEll(g, 290, 140, 120, 66, 0, '#b8384d', '#ff8a9a', 2.5); dgEll(g, 290, 238, 100, 20, 0, '#d9566a', '#ff9aaa', 2.5);
+  dgRibosome(g, 290, 196, 1.75);
   dgLine(g, [[40, 210], [600, 210]], '#c9b0ff', 3); dgBases(g, 'AUGGGCUUU', 172, 199, 24, 22, 2, true);
   dgTRNA(g, 278, 196, 'CCG', 'Gly', .9);
   const named = !o.marks;

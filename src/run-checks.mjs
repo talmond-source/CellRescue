@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import vm from 'node:vm';
 const engineText = await fs.readFile(new URL('./engine.js', import.meta.url), 'utf8');
+const introText = await fs.readFile(new URL('./intro.js', import.meta.url), 'utf8');
 const campaignText = await fs.readFile(new URL('./campaigns.js', import.meta.url), 'utf8');
 const missionText = await fs.readFile(new URL('./missions.js', import.meta.url), 'utf8');
 const questionText = await fs.readFile(new URL('./questions.js', import.meta.url), 'utf8');
@@ -10,5 +11,6 @@ const levelText = await fs.readFile(new URL('./levels.js', import.meta.url), 'ut
 const puzzleTestText = await fs.readFile(new URL('./verify-missions.js', import.meta.url), 'utf8');
 const verifyText = await fs.readFile(new URL('./verify.js', import.meta.url), 'utf8');
 new vm.Script(engineText);
+new vm.Script(introText);
 new vm.Script(campaignText);
-vm.runInNewContext(verifyText, { vm, moleculeText, levelText, campaignText, questionText, diagramText, missionText, puzzleTestText, engineText, console });
+vm.runInNewContext(verifyText, { vm, moleculeText, levelText, campaignText, questionText, diagramText, missionText, puzzleTestText, engineText, introText, console });

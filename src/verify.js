@@ -15,10 +15,11 @@ const documentMock={getElementById(id){if(!elements.has(id))elements.set(id,new 
 const fakeStore={};
 const sandbox={document:documentMock,window:{},console,localStorage:{getItem:k=>fakeStore[k]||null,setItem:(k,v)=>fakeStore[k]=v},addEventListener(){},requestAnimationFrame(){},structuredClone:v=>JSON.parse(JSON.stringify(v)),performance:{now:()=>0},setTimeout(){},Image:class{},HTMLInputElement:Element,Blob:class{},URL:{createObjectURL(){return 'test'},revokeObjectURL(){}}};
 const context=vm.createContext(sandbox);
-vm.runInContext(campaignText+'\n'+questionText+'\n'+diagramText+'\n'+moleculeText+'\n'+levelText+'\n'+missionText+'\n'+puzzleTestText+'\n'+engineText.replace(/load\(\)\.catch\([\s\S]*$/,''),context);
+vm.runInContext(campaignText+'\n'+questionText+'\n'+diagramText+'\n'+moleculeText+'\n'+levelText+'\n'+missionText+'\n'+puzzleTestText+'\n'+engineText.replace(/load\(\)\.catch\([\s\S]*$/,'')+'\n'+introText,context);
 const evaluate=code=>vm.runInContext(code,context);
 const check=(condition,message)=>{if(!condition)throw Error(message)};
 let checks=0;
+evaluate("mode='intro';introClock=0;for(let f=0;f<INTRO_LEN*30-2;f++)drawIntro(1/30);");check(evaluate('introClock>INTRO_LEN-1'),'The animated intro plays every scene without errors');checks++;
 check(evaluate('verifyQuestions()')===70,'All 70 bio-scan questions are well formed and draw their diagrams');checks+=70;
 evaluate("var answer=i=>answerQuestion(document.createElement('button'),i);var wrong=()=>activeQuestion.q.c.findIndex((_,i)=>i!==activeQuestion.q.a);var proceed=()=>$('feedback').children[1].onclick();");
 check(evaluate('RANGERS.length')===14,'14 characters');checks++;

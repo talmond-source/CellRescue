@@ -143,9 +143,25 @@ button.ghost{background:transparent;border-color:#3f6378;color:#a6bdd0;font-size
  #missionSelect .ranger{aspect-ratio:1/1.05}#missionSelect .ranger strong{font-size:6px;padding:4px 1px}#missionSelect .ranger .full{display:none}#missionSelect .ranger .short{display:inline}
 }
 @media (max-width:760px){#missionSelect .dossier>.selRole,#missionSelect .dossier>h1{grid-column:2}}
+
+/* ---------- animated intro ---------- */
+#intro{position:relative;border:1px solid #486278;border-radius:12px;overflow:hidden;box-shadow:0 16px 60px #0008;background:#000}
+#introArt{width:100%;display:block;aspect-ratio:16/9;image-rendering:pixelated}#intro{max-width:calc((100vh - 96px)*16/9);max-width:calc((100dvh - 96px)*16/9);margin-inline:auto}
+#skipIntro{position:absolute;right:10px;top:10px;font:10px "Press Start 2P",monospace;background:#000a;color:#fff;border:1px solid #fff6;border-radius:4px;padding:8px 10px;opacity:.75}
+#skipIntro:hover,#skipIntro:focus-visible{opacity:1}
+#introGate{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center}
+.gateKicker{margin:0;font:10px "Press Start 2P",monospace;color:#ff9a5a;letter-spacing:.12em}
+#playIntro{font:clamp(13px,2vw,18px) "Press Start 2P",monospace;padding:14px 24px;background:#ffd35e;color:#1b1030;border:3px solid #fff3c4;border-radius:4px;box-shadow:0 5px 0 #b5641f,0 0 24px #ffd35e88}
+#skipGate{font-size:13px;padding:7px 14px;background:#0c1a30cc;border:1px solid #5fa59c;color:#cfe}
+.gateNote{margin:0;font-size:12px;color:#9fb6c8}
+#introBtn{background:#0c1a30cc;border-color:#5fa59c;font-size:13px;padding:7px 14px}
+.titleBtns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
 </style>
 <main><header><strong>ORGANELLE RANGERS</strong><span>CELL RESCUE · ARCADE MISSIONS</span><div class="row"><button id="sound">Sound on</button><button id="pause" hidden>Pause</button></div></header>
-<section id="title" hidden><canvas id="titleArt" width="640" height="360" aria-label="Organelle Rangers: Cell Rescue title screen"></canvas><div id="titleMenu"><button id="startBtn">PRESS START</button><span class="sub">14 RANGERS · 1 CELL · NO TIME TO LOSE</span><button id="howBtn">How to play</button></div><div id="howPanel" hidden><span><b>← →</b> Move</span><span><b>↑ / Space</b> Jump</span><span><b>Z</b> Punch, punch, kick</span><span><b>↓ + Z</b> in the air: Dive kick</span><span><b>X</b> Blaster</span><span><b>C</b> Dodge</span><span><b>E</b> Use a station</span><span><b>Esc</b> Pause</span></div></section>
+<section id="intro" hidden><canvas id="introArt" width="640" height="360" aria-label="Animated intro: the Phage invades Cell City"></canvas>
+<button id="skipIntro" hidden>SKIP ▶</button>
+<div id="introGate" hidden><p class="gateKicker">A STORY FROM CELL CITY</p><button id="playIntro">▶ PLAY INTRO</button><button id="skipGate" class="ghost">Skip to the title</button><p class="gateNote">About 1½ minutes · sound on · skip any time</p></div></section>
+<section id="title" hidden><canvas id="titleArt" width="640" height="360" aria-label="Organelle Rangers: Cell Rescue title screen"></canvas><div id="titleMenu"><button id="startBtn">PRESS START</button><span class="sub">14 RANGERS · 1 CELL · NO TIME TO LOSE</span><span class="titleBtns"><button id="howBtn">How to play</button><button id="introBtn">▶ Watch intro</button></span></div><div id="howPanel" hidden><span><b>← →</b> Move</span><span><b>↑ / Space</b> Jump</span><span><b>Z</b> Punch, punch, kick</span><span><b>Z</b> in the air: Dive kick</span><span><b>X</b> Blaster</span><span><b>C</b> Dodge</span><span><b>E</b> Use a station</span><span><b>Esc</b> Pause</span></div></section>
 <div id="loading">Preparing Ranger artwork… <span id="loadProgress"></span></div>
 <section id="missionSelect" hidden><div class="selBg" aria-hidden="true"></div>
 <div class="selTop"><button id="toTitle" class="selBack">◀ TITLE</button><h2 class="selTitle">SELECT YOUR RANGER</h2><span class="selCount" id="selCount"></span></div>

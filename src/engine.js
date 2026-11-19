@@ -83,7 +83,7 @@ async function load(){
  for(const [family,info] of Object.entries(FAMILY)){if(family==='bacteria')continue;if(ASSETS[family+'-sheet'])await loadAtlas(family,4,3,info.height);else atlases[family]=atlases.bacteria.map(c=>filtered(c,info.placeholder));}
  await loadAtlas('phage',4,2,104);for(const name of ['environment','archive','membranes'])environments[name]=await readImage(ASSETS[name]);
  environment=environments.environment;
- $('loading').hidden=true;$('student').value=profile.name;buildRoster();selectRanger(selected);save();showTitle();last=performance.now();requestAnimationFrame(tick);
+ $('loading').hidden=true;$('student').value=profile.name;buildRoster();selectRanger(selected);save();if(introSeen()||/nointro/.test(location.search))showTitle();else showIntroGate();last=performance.now();requestAnimationFrame(tick);
 }
 /* head-and-shoulders crop of a Ranger's portrait for the select grid (falls back to the idle sprite) */
 const mugs={};
@@ -391,7 +391,7 @@ function drawTitle(dt){
  // scanlines
  g.fillStyle='#0000001c';for(let y=0;y<360;y+=3)g.fillRect(0,y,640,1);
 }
-function showTitle(){mode='title';$('title').hidden=false;$('missionSelect').hidden=true;titleClock=0;$('startBtn').focus();}
+function showTitle(){mode='title';$('intro')&&($('intro').hidden=true);$('title').hidden=false;$('missionSelect').hidden=true;titleClock=0;$('startBtn').focus();}
 function leaveTitle(){$('title').hidden=true;$('howPanel').hidden=true;$('missionSelect').hidden=false;mode='select';tone(660,.1,'triangle');setTimeout(()=>tone(990,.14,'triangle'),90);selectRanger(selected);}
 /* ---------- Ranger select: the chosen Ranger shows off its moves ---------- */
 let showcaseClock=0;
@@ -404,9 +404,11 @@ function drawShowcase(dt){
  const bob=frame===0?Math.round(Math.sin(showcaseClock*3)*2):0;
  g.imageSmoothingEnabled=false;g.drawImage(atlases[ranger.id][frame],-10,-4+bob+(frame?0:0),320,280);
 }
-let shownMode='';function tick(now){if(mode!==shownMode&&document.body?.dataset){shownMode=mode;document.body.dataset.mode=mode;}const dt=Math.min((now-last)/1000,.06);last=now;if(mode==='title')drawTitle(dt);else if(mode==='select'&&!$('missionSelect').hidden)drawShowcase(dt);if(mode==='dialog')typeStep(dt);if(mode==='play'){accumulator+=dt;while(accumulator>=1/60&&mode==='play'){step(1/60);taps.clear();accumulator-=1/60;}}else{accumulator=0;taps.clear();}draw();requestAnimationFrame(tick);}
+let shownMode='';function tick(now){if(mode!==shownMode&&document.body?.dataset){shownMode=mode;document.body.dataset.mode=mode;}const dt=Math.min((now-last)/1000,.06);last=now;if(mode==='title')drawTitle(dt);else if(mode==='intro')drawIntro(Math.min(dt,.05));else if(mode==='select'&&!$('missionSelect').hidden)drawShowcase(dt);if(mode==='dialog')typeStep(dt);if(mode==='play'){accumulator+=dt;while(accumulator>=1/60&&mode==='play'){step(1/60);taps.clear();accumulator-=1/60;}}else{accumulator=0;taps.clear();}draw();requestAnimationFrame(tick);}
 function keyDown(code){if(!keys.has(code))taps.add(code);keys.add(code);}
 addEventListener('keydown',e=>{if(e.target instanceof HTMLInputElement)return;
+ if(mode==='intro'){e.preventDefault();if(!e.repeat)endIntro();return;}
+ if(mode==='introGate'&&(e.code==='Enter'||e.code==='Space')){e.preventDefault();if(!e.repeat)startIntro();return;}
  if(mode==='title'&&(e.code==='Enter'||e.code==='Space')){e.preventDefault();if(!e.repeat)leaveTitle();return;}
  if(mode==='select'&&!$('missionSelect').hidden){const cols=getComputedStyle($('roster')).gridTemplateColumns.split(' ').length||7,mv={ArrowLeft:-1,ArrowRight:1,ArrowUp:-cols,ArrowDown:cols}[e.code];
   if(mv!==undefined){e.preventDefault();const n=selected+mv;if(n>=0&&n<RANGERS.length){selectRanger(n);tone(520,.05,'square');$('roster').children[n]?.focus?.({preventScroll:true});}return;}
@@ -437,5 +439,5 @@ addEventListener('keydown',e=>{if(e.isTrusted&&!e.repeat&&e.key&&e.key.length>0)
  for(const n of ['pointerup','pointercancel','lostpointercapture'])pad.addEventListener(n,e=>{if(e.pointerId===id){id=null;set(new Set());}});
  $('padStart').addEventListener('pointerdown',e=>{e.preventDefault();if(mode==='play')pause();else if(mode==='pause'&&!$('overlay').hidden){$('overlay').hidden=true;mode='play';}});
 })();
-$('next').onclick=nextLine;$('startBtn').onclick=leaveTitle;$('howBtn').onclick=()=>{$('howPanel').hidden=!$('howPanel').hidden;};$('toTitle').onclick=showTitle;$('pause').onclick=pause;$('launch').onclick=()=>startMission();$('resume').onclick=()=>startMission(true);$('export').onclick=exportResults;$('student').onchange=()=>{profile.name=$('student').value.trim();save();};$('sound').onclick=()=>{muted=!muted;$('sound').textContent=muted?'Sound off':'Sound on';};
+$('next').onclick=nextLine;$('startBtn').onclick=leaveTitle;$('introBtn').onclick=startIntro;$('playIntro').onclick=startIntro;$('skipGate').onclick=()=>{try{localStorage.setItem('cell-rescue-intro-seen','1');}catch(e){}endIntro();};$('skipIntro').onclick=endIntro;$('introArt').onclick=()=>{if(mode==='intro')endIntro();};$('howBtn').onclick=()=>{$('howPanel').hidden=!$('howPanel').hidden;};$('toTitle').onclick=showTitle;$('pause').onclick=pause;$('launch').onclick=()=>startMission();$('resume').onclick=()=>startMission(true);$('export').onclick=exportResults;$('student').onchange=()=>{profile.name=$('student').value.trim();save();};$('sound').onclick=()=>{muted=!muted;$('sound').textContent=muted?'Sound off':'Sound on';};
 load().catch(error=>{$('loading').textContent='Artwork could not load. Reopen the downloaded HTML file to try again.';console.error(error);});

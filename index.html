@@ -1353,19 +1353,20 @@ const PUZZLE_KIND={ribosome:'sequence',dna:'sequence',rna:'sequence',mitosis:'se
 const PAIR={A:'T',T:'A',G:'C',C:'G'},RNA_PAIR={A:'U',T:'A',G:'C',C:'G'},CODON_TRNA={AUG:'UAC',GGC:'CCG',UUU:'AAA',UAA:'STOP'},CODON_AA={AUG:'Met',GGC:'Gly',UUU:'Phe'};
 const PHASES=['prophase','metaphase','anaphase','telophase'];
 function sequenceConfig(id,r){
- if(id==='dna'){const t=['TAC','GATC','CGTAA'][r];return {template:t,title:'BASE-PAIR BRIDGE',prompt:'Template  '+t.split('').join(' '),answer:t.split('').map(b=>PAIR[b]),options:['A','T','G','C'],line:'Build the matching strand',hint:'A pairs with T, and G pairs with C.'};}
- if(id==='rna'){const t=['TAC','GCAT','TACGT'][r];return {template:t,rna:true,title:'TRANSCRIPTION GATE',prompt:'DNA template  '+t.split('').join(' '),answer:t.split('').map(b=>RNA_PAIR[b]),options:['A','U','G','C','T'],line:'Build the mRNA copy',hint:'RNA pairs U with A and has no T. G pairs with C.'};}
- if(id==='ribosome'){const c=[['AUG','GGC'],['AUG','UUU','GGC'],['AUG','GGC','UUU','UAA']][r];return {title:'TRANSLATION BAY',prompt:'mRNA  '+c.join(' '),answer:c.map(x=>CODON_TRNA[x]),options:['UAC','CCG','AAA','AUG','STOP'],line:'Send the tRNA that pairs with each codon',hint:'An anticodon pairs with the codon: A with U, G with C. A stop codon gets the release factor.',codons:c};}
+ if(id==='dna'){const t=['TACG','GATTC','CGTAAG'][r];return {template:t,title:'BASE-PAIR BRIDGE',prompt:'Template  '+t.split('').join(' '),answer:t.split('').map(b=>PAIR[b]),options:['A','T','G','C','U'],line:'Build the matching DNA strand',hint:'A pairs with T, and G pairs with C. U belongs to RNA, not DNA.'};}
+ if(id==='rna'){const t=['TACG','GCATT','TACGTA'][r];return {template:t,rna:true,title:'TRANSCRIPTION GATE',prompt:'DNA template  '+t.split('').join(' '),answer:t.split('').map(b=>RNA_PAIR[b]),options:['A','U','G','C','T'],line:'Build the mRNA copy',hint:'RNA pairs U with A and has no T. G pairs with C.'};}
+ if(id==='ribosome'){const c=[['AUG','GGC'],['AUG','UUU','GGC'],['AUG','GGC','UUU','UAA']][r];return {title:'TRANSLATION BAY',prompt:'mRNA  '+c.join(' '),answer:c.map(x=>CODON_TRNA[x]),options:['UAC','CCG','AAA','STOP','AUG','CAU','GGC'],line:'Send the tRNA that pairs with each codon',hint:'The tRNA anticodon pairs with the codon (A–U, G–C) — it is not a copy of the codon. A stop codon gets the release factor.',codons:c};}
  if(id==='mitosis'){const a=[['metaphase'],['prophase','metaphase','anaphase'],PHASES.slice()][r];return {title:'SPINDLE CONTROL',prompt:r===0?'Find metaphase':'Put the stages in order',answer:a,options:PHASES.slice(),line:r===0?'Hit the cell in metaphase':'Hit the stages in the order they happen',hint:'Prophase → metaphase → anaphase → telophase. Metaphase lines chromosomes up in the middle.',pictures:true};}
- if(id==='crispr'){const guides=[['AUGCC'],['GCAUU','CCGAU'],['UAGCG','AACGU']][r];
+ if(id==='crispr'){const guides=[['AUGCCA'],['GCAUUC','CCGAUG'],['UAGCGA','AACGUC']][r];
   const target=g=>g.split('').map(b=>({A:'T',U:'A',G:'C',C:'G'})[b]).join('');
-  return {title:'TARGET CHECKPOINT',prompt:'Guide RNA  '+guides.join('  then  '),answer:guides.map(target),options:null,guides,line:'Cut the DNA that pairs with the guide',hint:'Guide RNA pairs with DNA: A–T, U–A, G–C, C–G.'};}
+  return {title:'TARGET CHECKPOINT',prompt:'Guide RNA  '+guides.join('  then  '),answer:guides.map(target),options:null,guides,line:'Cut the DNA that pairs with the guide',hint:'Guide RNA pairs with DNA: A–T, U–A, G–C, C–G. Every base must pair — one mismatch and Cas9 will not cut.'};}
 }
 function crisprOptions(cfg,step){
- const right=cfg.answer[step],g=cfg.guides[step];
- const wrong1=g.replace(/U/g,'T'),wrong2=right.split('').reverse().join('');
- const set=[right,wrong1,wrong2===right?right.slice(1)+right[0]:wrong2];
- return set;
+ const right=cfg.answer[step],g=cfg.guides[step],swap={A:'G',G:'A',C:'T',T:'C'};
+ const copy=g.replace(/U/g,'T');                                  // copies the guide instead of pairing with it
+ const k=1+((step*3+right.length)%(right.length-2)),mismatch=right.slice(0,k)+swap[right[k]]+right.slice(k+1); // one base wrong
+ let back=right.split('').reverse().join('');if(back===right||back===copy)back=right.slice(1)+right[0];   // right letters, wrong direction
+ return [...new Set([right,copy,mismatch,back])];
 }
 const CARRY={
  atp:r=>({title:'PUMP POWER',line:'Charge ADP into ATP, then spend it at the pump',goal:r+1,
@@ -1407,15 +1408,18 @@ const METER={
  smoother:r=>({variant:'lift',title:'CALCIUM LIFT',line:'Release Ca²⁺ from the smooth ER. The muscle fiber contracts and hauls the lift up.',label:'Ca²⁺ LEVEL',gain:28,leak:[9,11,13][r],cool:.6,threshold:0,ledge:[160,140,120][r],pumps:[60],high:[],
   pumpLabel:'RELEASE Ca²⁺',hint:'Stand on the lift and hit the release switch fast. When calcium is pumped back, the muscle relaxes.'})
 };
+/* answers land in a random spot every time, so students read the choices instead of memorising a position */
+function shuffled(list){const o=list.slice();for(let i=o.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[o[i],o[j]]=[o[j],o[i]];}return o;}
+function reshuffle(room,avoid){const cfg=room.cfg,opts=cfg.options||crisprOptions(cfg,room.pos),want=cfg.answer[room.pos];
+ for(let tries=0;tries<12;tries++){const vals=shuffled(opts);room.switches.forEach((sw,n)=>{sw.value=vals[n];sw.swap=.3;});if(room.switches[avoid]?.value!==want)break;}}
 function setupRoom(w,room,id){
  const a=room.a;
  if(room.kind==='sequence'){
   room.cfg=sequenceConfig(id,room.r);
   room.switches=[];
   const opts=room.cfg.options||crisprOptions(room.cfg,0);
-  const order=opts.map((_,i)=>i);const R=seeded(a+room.r*13+id.length);for(let i=order.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[order[i],order[j]]=[order[j],order[i]];}
-  const pic=room.cfg.pictures,span=pic?92:room.cfg.options?72:110;
-  order.forEach((k,n)=>room.switches.push({x:a+70+n*span,value:opts[k],flash:0,good:0,w:pic?60:room.cfg.options?40:84}));
+  const pic=room.cfg.pictures,span=pic?92:room.cfg.options?Math.min(72,380/(opts.length-1)):110;
+  shuffled(opts).forEach((v,n)=>room.switches.push({x:a+70+n*span,value:v,flash:0,good:0,swap:0,w:pic?60:room.cfg.options?40:92}));
  }
  if(room.kind==='carry'){
   room.cfg=CARRY[id](room.r);
@@ -1484,7 +1488,8 @@ function updateArenas(dt){
 /* Puzzle rooms */
 function updateRoom(room,dt){
  room.flash=Math.max(0,room.flash-dt);
- for(const s of room.switches||[]){s.recent=Math.max(0,(s.recent||0)-dt);s.flash=Math.max(0,s.flash-dt);s.good=Math.max(0,(s.good||0)-dt);if(s.cool!==undefined)s.cool=Math.max(0,s.cool-dt);}
+ if(room.swapIn>0){room.swapIn-=dt;if(room.swapIn<=0)reshuffle(room,room.swapAvoid);}
+ for(const s of room.switches||[]){s.recent=Math.max(0,(s.recent||0)-dt);s.flash=Math.max(0,s.flash-dt);s.good=Math.max(0,(s.good||0)-dt);s.swap=Math.max(0,(s.swap||0)-dt);if(s.cool!==undefined)s.cool=Math.max(0,s.cool-dt);}
  for(const m of room.machines||[]){m.flash=Math.max(0,m.flash-dt);m.ok=Math.max(0,(m.ok||0)-dt);m.bad=Math.max(0,(m.bad||0)-dt);}
  if(!room.entered&&player.x>room.a-20&&player.x<room.b){room.entered=true;toast(room.cfg.line);}
  if(room.kind==='meter'&&!room.solved){
@@ -1518,11 +1523,12 @@ function pressSwitch(room,s){
   if(s.cool>0){toast(room.cfg.pumpLabel+' recharging — use another one');return;}
   s.cool=room.cfg.cool;s.flash=.45;room.meter=Math.min(100,room.meter+room.cfg.gain);tone(300+room.meter*4,.08,'square',.02);burst(s.x,switchBase(room,s)-30,'#9fe8ff',8);return;
  }
+ if(room.swapIn>0)return;
  const cfg=room.cfg,want=cfg.answer[room.pos];
  if(s.value===want){
-  s.good=.9;s.flash=0;room.pos++;tone(520+room.pos*70,.1,'triangle');burst(s.x,FLOOR-34,'#9effc4',10);
+  s.good=room.pos+1>=cfg.answer.length?.9:.5;s.flash=0;room.pos++;tone(520+room.pos*70,.1,'triangle');burst(s.x,FLOOR-34,'#9effc4',10);
   if(room.pos>=cfg.answer.length)solveRoom(room);
-  else if(!cfg.options){const opts=crisprOptions(cfg,room.pos);const order=[2,0,1];room.switches.forEach((sw,n)=>{sw.value=opts[order[(n+room.pos)%3]];});}
+  else{room.swapIn=.45;room.swapAvoid=room.switches.indexOf(s);}  // the choices scramble once the green check has shown
  }else{
   s.flash=.9;s.good=0;room.mistakes++;room.flash=.6;tone(110,.18,'sawtooth',.03);toast('Not quite — '+cfg.hint);
  }
@@ -1666,7 +1672,7 @@ function drawSwitch(s,room){
  const seq=room.kind==='sequence',good=seq?s.good>0:s.flash>0,bad=seq&&s.flash>0,done=room.solved;
  const x=s.x-camera+(bad?Math.sin(clock*60)*2*Math.min(1,s.flash*3):0),base=switchBase(room,s),w=s.w||34,h=room.cfg.pictures?52:30;if(x<-60||x>W+60)return;
  const edge=bad?FB.badEdge:good?FB.okEdge:done?FB.ok:s.cool>0?'#4b6275':'#ffd36b',fill=bad?FB.bad:good?FB.ok:done?FB.okDim:s.cool>0?'#16263a':'#1b3550';
- rect(edge,x-w/2-2,base-h-8,w+4,h+10);rect('#0b1a2c',x-w/2,base-h-6,w,h+6);rect(fill,x-w/2+2,base-h-4,w-4,h+2);
+ rect(s.swap>0?'#ffffff':edge,x-w/2-2,base-h-8,w+4,h+10);rect('#0b1a2c',x-w/2,base-h-6,w,h+6);rect(s.swap>.15?'#e8f6ff':fill,x-w/2+2,base-h-4,w-4,h+2);
  if(bad||good)markLater(x,base-h-22,good,10);else if(done)markLater(x,base-h-18,true,6);
  if(s.lift){rect('#2f4a63',x-2,base-26,4,26);rect(s.cool>0?'#33485a':'#ff8fa8',x-7,base-36,14,12);text('Ca²⁺',x,base-27,7,'#1b0d14','center');text('Z · '+room.cfg.pumpLabel,x,base+24,8,'#fff0b2','center');return;}
  if(room.kind==='meter'){text(room.cfg.pumpLabel,x,base-h-12,8,'#fff0b2','center');rect(s.cool>0?'#33485a':'#ff8fa8',x-7,base-h+6,14,14);text('Z',x,base-h+17,9,'#1b0d14','center');return;}

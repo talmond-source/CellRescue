@@ -118,7 +118,7 @@ for(const r of ['ribosome','dna','mitosis','crispr','mito']){
 // Puzzle zones: every room in every Ranger's puzzle zone can be solved, and wrong moves don't solve it.
 evaluate(`var puzzleReport=[];var solveRoomFully=(room)=>{let guard=0;
  if(room.kind==='sequence'){const wrong=room.switches.find(s=>s.value!==room.cfg.answer[0]);if(wrong){pressSwitch(room,wrong);if(room.pos!==0)puzzleReport.push(ranger.id+' wrong advanced');}
-  while(!room.solved&&guard++<20){const s=room.switches.find(s=>s.value===room.cfg.answer[room.pos]);if(!s){puzzleReport.push(ranger.id+' no switch for '+room.cfg.answer[room.pos]);break;}pressSwitch(room,s);}}
+  while(!room.solved&&guard++<20){const s=room.switches.find(s=>s.value===room.cfg.answer[room.pos]);if(!s){puzzleReport.push(ranger.id+' no switch for '+room.cfg.answer[room.pos]);break;}pressSwitch(room,s);updateRoom(room,.5);}}
  if(room.kind==='carry'){while(!room.solved&&guard++<40){
   if(!player.carry){const item=world.items.find(it=>it.room===room.r);const d=room.dispensers[0];player.x=item?item.x:d.x;carryInteract();}
   else{const m=room.machines.find(m=>m.accept[player.carry.key]);if(!m){puzzleReport.push(ranger.id+' nowhere to put '+player.carry.key);break;}player.x=m.x;carryInteract();}}}
@@ -132,6 +132,12 @@ evaluate(`var puzzleReport=[];var solveRoomFully=(room)=>{let guard=0;
  for(const r of RANGERS){ranger=r;selected=RANGERS.indexOf(r);startMission();loadZone(ZONE_STYLES[r.id].indexOf('puzzle'));while(mode==='dialog')nextLine();
   for(const room of world.rooms){if(room.cfg.answer&&new Set(room.switches.map(s=>s.value)).size!==room.switches.length)puzzleReport.push(r.id+' duplicate switch');solveRoomFully(room);if(world.cells[room.r].hidden)puzzleReport.push(r.id+' no molecule');}}`);
 check(evaluate('puzzleReport.length')===0,'All 42 puzzle rooms solvable: '+evaluate('puzzleReport.join("; ")'));checks+=42;
+// The right answer is not parked in the same spot: across 30 set-ups of each sequence room it shows up in several positions,
+// and after a correct step the choices scramble (and never put the next answer under the switch just hit).
+evaluate(`var spread=[];for(const id of ['dna','rna','ribosome','mitosis','crispr']){for(let r=0;r<3;r++){const seen=new Set();for(let k=0;k<30;k++){const room={a:300,b:820,r,kind:'sequence',pos:0,flash:0};setupRoom(newZone('puzzle'),room,id);seen.add(room.switches.findIndex(s=>s.value===room.cfg.answer[0]));}spread.push(id+r+':'+seen.size);}}
+ var room2={a:300,b:820,r:2,kind:'sequence',pos:0,flash:0,switches:[]};setupRoom(newZone('puzzle'),room2,'crispr');var hit=room2.switches.find(s=>s.value===room2.cfg.answer[0]),hitAt=room2.switches.indexOf(hit);pressSwitch(room2,hit);updateRoom(room2,.5);var nextAt=room2.switches.findIndex(s=>s.value===room2.cfg.answer[1]);`);
+check(evaluate("spread.every(x=>+x.split(':')[1]>=3)"),'Correct answers appear in at least 3 different positions: '+evaluate("spread.join(' ')"));checks++;
+check(evaluate("nextAt>=0 && nextAt!==hitAt && room2.switches.length===4"),'After a correct step the choices scramble and include the next answer');checks++;
 // Wrong deliveries are rejected with a reason.
 evaluate("ranger=RANGERS.find(r=>r.id==='cytoplasm');selected=RANGERS.indexOf(ranger);startMission();loadZone(ZONE_STYLES.cytoplasm.indexOf('puzzle'));while(mode==='dialog')nextLine();var rm=world.rooms[0];player.x=rm.dispensers[0].x;carryInteract();player.x=rm.machines.find(m=>m.id==='mito').x;carryInteract();");
 check(evaluate("player.carry.key==='glucose' && rm.count===0 && $('toast').textContent.includes('pyruvate')"),'Mitochondrion rejects glucose and explains why');checks++;

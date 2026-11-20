@@ -156,7 +156,7 @@ function loadZone(index){
 }
 function makeEnemy(x,type){const family=type===3?'phage':(world&&world.family)||ENEMY_FAMILY[ranger.id]||'bacteria',info=FAMILY[family],hp=type===3?70:Math.max(3,5+type*2+(info?.hp||0));return {x,y:FLOOR,home:x,type,family,hp,max:hp,face:-1,state:'approach',timer:.4+(x%5)*.1,clock:0,hurt:0,dead:0,attackCount:0,hit:false,walk:0,scale:1,drop:0,lift:0};}
 /* on touch screens, key names in messages become the on-screen button names */
-function keyWords(t){if(!touchUI.on)return t;return t.replace(/\bZ chains/g,'B chains').replace(/([Pp])ress Z\b/g,'$1ress B').replace(/\bX draws/g,'X draws').replace(/\bC dodges/g,'L dodges').replace(/\(C\)/g,'(L)').replace(/\b([Pp])ress E\b/g,'$1ress USE');}
+function keyWords(t){if(typeof PADUI!=='undefined'&&PADUI.on)return padWords(t);if(!touchUI.on)return t;return t.replace(/\bZ chains/g,'B chains').replace(/([Pp])ress Z\b/g,'$1ress B').replace(/\bX draws/g,'X draws').replace(/\bC dodges/g,'L dodges').replace(/\(C\)/g,'(L)').replace(/\b([Pp])ress E\b/g,'$1ress USE');}
 function toast(text,seconds=2.8){text=keyWords(text);$('toast').textContent=text;$('toast').hidden=false;toastTimer=seconds;}
 function updateHUD(){if(!player)return;$('rangerName').textContent=ranger.name.toUpperCase();$('health').firstElementChild.style.width=player.hp*10+'%';$('health').setAttribute('aria-valuenow',player.hp);$('energy').textContent='BLASTER '+Math.floor(player.energy)+'/6';const count=world.cells.filter(c=>c.taken).length;const cm=combatHUD(),extra=world.lock?(world.mode?.custom?'LOCKDOWN':'LOCKDOWN · wave '+Math.max(1,Math.min(world.lock.waves.length,world.lock.wave+1))+'/'+world.lock.waves.length)+(cm?' · '+cm:''):world.style==='puzzle'?puzzleObjective():cm||null;$('objective').textContent=world.boss?(world.shieldActive&&!world.shieldUnlocked?(bossDef()?'DRAGON':'PHAGE')+' SHIELD · Left station [E]':(bossDef()?bossDef().name:'PHAGE')+' · Final encounter'):ranger.zones[zone]+' · '+(world.terminal.done?'Reach the exit':extra&&count<3?extra+' · '+CARGO[ranger.id][zone]+' '+count+'/3':count<3?CARGO[ranger.id][zone]+' '+count+'/3':'Activate station [E]');}
 function burst(x,y,color,count=12){for(let i=0;i<count;i++){const a=Math.random()*Math.PI*2,s=30+Math.random()*120;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-40,life:.25+Math.random()*.25,max:.5,color});}}
@@ -184,7 +184,7 @@ function updateDive(p,dt){
  }
  if(p.ground){
   for(const e of enemies)if(e.hp>0&&Math.abs(e.x-p.x)<72&&Math.abs(e.y-p.y)<24)damageEnemy(e,2,24);
-  rings.push({x:p.x+p.face*18,y:p.y,life:.38});shake=Math.max(shake,5);burst(p.x+p.face*18,p.y-4,'#9fe8ff',14);tone(70,.18,'sawtooth',.035);
+  rings.push({x:p.x+p.face*18,y:p.y,life:.38});shake=Math.max(shake,5);if(typeof rumble==='function')rumble(.35,90);burst(p.x+p.face*18,p.y-4,'#9fe8ff',14);tone(70,.18,'sawtooth',.035);
   p.vx=0;p.action={kind:'land',time:0,duration:.2,hit:true};
  }
 }
@@ -209,7 +209,7 @@ function splitMutant(e){
  burst(e.x,e.y-20,'#c58cff',16);if(!world.splitTold){world.splitTold=true;toast('The mutated cell divided — finish them fast!');}
 }
 function releaseLatch(e){e.latched=false;if(player.latch===e)player.latch=null;e.x=clamp(e.x-player.face*44,35,world.length-35);e.y=FLOOR;e.state='recover';e.timer=.9;e.hurt=.25;burst(player.x,player.y-30,'#a8ffd9',10);}
-function damagePlayer(amount,sourceX){if(player.inv>0||player.dodge>0||mode!=='play')return;/* Rangers are invincible: learning, not reflexes, decides the mission. A hit still flashes and pushes back. */combatHit(sourceX);player.inv=.85;player.action=null;player.queue=false;player.vx=(player.x<sourceX?-1:1)*110;shake=4;burst(player.x,player.y-35,'#ff7999');tone(90,.12,'sawtooth');updateHUD();}
+function damagePlayer(amount,sourceX){if(player.inv>0||player.dodge>0||mode!=='play')return;/* Rangers are invincible: learning, not reflexes, decides the mission. A hit still flashes and pushes back. */combatHit(sourceX);if(typeof rumble==='function')rumble(.55,140);player.inv=.85;player.action=null;player.queue=false;player.vx=(player.x<sourceX?-1:1)*110;shake=4;burst(player.x,player.y-35,'#ff7999');tone(90,.12,'sawtooth');updateHUD();}
 function terminal(){
  if(world.terminal.done||Math.abs(player.x-world.terminal.x)>70){if(world.style==='puzzle'&&!world.boss)carryInteract();return;}
  if(world.boss){
@@ -317,7 +317,7 @@ function frameForPlayer(){const p=player;if(p.inv>.68)return 15;if(p.dodge>0)ret
  }if(!p.ground)return 11;if(Math.abs(p.vx)>15)return [1,2,3,2][Math.floor(p.runClock)%4];return 0;}
 function frameForEnemy(e){if(e.type!==3&&(e.air||e.latched))return e.type*4+3;if(e.type===3){if(e.hp<=0)return 7;if(e.hurt>0)return 6;if(e.state==='windup')return e.attack==='blast'?4:2;if(e.state==='active')return e.attack==='blast'?5:3;return Math.floor(e.walk)%2;}return e.type*4+(e.state==='windup'?2:e.state==='active'?3:Math.floor(e.walk)%2);}
 function rect(color,x,y,w,h){ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.ceil(w),Math.ceil(h));}
-function text(value,x,y,size=10,color='#e8fff5',align='left'){ctx.font='bold '+size+'px monospace';ctx.textAlign=align;ctx.fillStyle='#081120';ctx.fillText(value,x+1,y+1);ctx.fillStyle=color;ctx.fillText(value,x,y);}
+function text(value,x,y,size=10,color='#e8fff5',align='left'){if(typeof PADUI!=='undefined'&&PADUI.on&&typeof value==='string'&&/press|Press|Hold|Keys:|Mouse:|^E · |keyboard|arrow keys/.test(value))value=padWords(value);ctx.font='bold '+size+'px monospace';ctx.textAlign=align;ctx.fillStyle='#081120';ctx.fillText(value,x+1,y+1);ctx.fillStyle=color;ctx.fillText(value,x,y);}
 function drawSprite(id,index,x,y,face=1,alpha=1,rot=0,scale=1){const art=atlases[id]?.[index];if(!art)return;ctx.save();ctx.translate(Math.round(x-camera),Math.round(y));ctx.scale(face*scale,scale);if(rot){ctx.translate(0,DIVE_DROP-38);ctx.rotate(rot);ctx.translate(0,38);}ctx.globalAlpha=alpha;ctx.drawImage(art,-64,-102);ctx.restore();}
 const DIVE_ANGLE=.72,DIVE_DROP=9;
 function drawPlatform(x,y,w,base=false){x-=camera;rect('#0a182b',x,y,w,base?60:18);rect('#6ecbbf',x,y,w,3);rect('#a8fbe1',x+2,y,w-4,1);rect('#324b66',x,y+4,w,base?48:12);rect('#17283e',x,y+13,w,3);

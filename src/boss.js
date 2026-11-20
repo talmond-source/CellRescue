@@ -108,7 +108,7 @@ BOSSES.nucleus = {
   const camTarget = clamp((p.x + e.hx) / 2 - W / 2, 0, world.length - W); camera += (camTarget - camera) * Math.min(1, dt * 6);
   if (c.won) { c.won += dt; e.hx += e.face * -1 * 0 + (e.hx > p.x ? 1 : -1) * 260 * dt * Math.min(1, c.won); e.hy -= 220 * dt * Math.min(1, c.won); if (c.won > 2.6) { world.clash = null; e.hp = 0; e.dead = .01; world.cleared = true; } return true; }
   c.k = Math.max(0, c.k - .018 * dt);
-  const pick = n => { const qi = c.order[c.q % c.order.length], q = CLASH_Q[qi], right = c.swap ? 1 - n : n; if (right === 0) { c.k = Math.min(1, c.k + .16); c.q++; c.swap = Math.random() < .5; c.flash = .35; shake = 9; tone(700, .15, 'square', .03); burst(this.mid(c, e).x, this.mid(c, e).y, '#9fe8ff', 30);
+  const pick = n => { const qi = c.order[c.q % c.order.length], q = CLASH_Q[qi], right = c.swap ? 1 - n : n; if (right === 0) { c.k = Math.min(1, c.k + .16); c.q++; c.swap = Math.random() < .5; c.flash = .35; shake = 9; tone(700, .15, 'square', .03); rumble(.9, 220); burst(this.mid(c, e).x, this.mid(c, e).y, '#9fe8ff', 30);
     if (c.k >= 1) { c.won = .01; tone(1000, .6, 'triangle', .04); burst(e.hx, e.hy, '#ffffff', 60); shake = 14; toast('The dragon is blasted out of the genome! Wounded, it flees… this isn’t over.', 5); run.score += 1000; } }
    else { c.k = Math.max(0, c.k - .1); run.retries++; tone(110, .2, 'sawtooth', .03); toast('Not quite: ' + q[1].toLowerCase() + '. The dragon pushes back!', 3); c.q++; c.swap = Math.random() < .5; } };
   if (taps.has('ArrowLeft') || taps.has('KeyA')) c.sel = 0; if (taps.has('ArrowRight') || taps.has('KeyD')) c.sel = 1;
@@ -155,7 +155,7 @@ BOSSES.crispr = {
   world.terminal.x = -999; world.terminal.done = true; world.dragonCut = 0; bossPointer();
   const e = makeDragon(760); e.ally = false; e.hp = e.max = 999; world.fin = { phase: 'intro', t: 0, d: e, killed: 0, spawned: 0, spawnT: 0, typed: '', sel: 0, wrong: 0 }; world.finDragon = e;
  },
- wheelOn() { return touchUI.on; },
+ wheelOn() { return touchUI.on || (typeof PADUI !== 'undefined' && PADUI.on); },
  // the dragon is not in the enemy list: it flies on its own path
  fly(e, dt, mode) {
   pushTrail(e); e.clock += dt; const p = player;
@@ -194,7 +194,7 @@ BOSSES.crispr = {
  typing(f) {
   f.bad = Math.max(0, (f.bad || 0) - 1 / 60); const L = 'AUGC';
   if (this.wheelOn()) {
-   if (taps.has('ArrowLeft')) f.sel = (f.sel + 3) % 4; if (taps.has('ArrowRight')) f.sel = (f.sel + 1) % 4;
+   if (taps.has('ArrowLeft')) f.sel = (f.sel + 3) % 4; if (taps.has('ArrowRight')) f.sel = (f.sel + 1) % 4; if (taps.has('ArrowUp')) f.sel = 0; if (taps.has('ArrowDown')) f.sel = 2;
    if (taps.has('KeyZ') || taps.has('Space') || taps.has('KeyE')) this.enter(L[f.sel]);
    if (world.bossTap) { const t = world.bossTap; world.bossTap = null; for (let i = 0; i < 4; i++) { const [x, y] = this.wheelPos(i); if (Math.hypot(t.x - x, t.y - y) < 30) { f.sel = i; this.enter(L[i]); } } }
   }
@@ -235,8 +235,9 @@ BOSSES.crispr = {
   const help = f.phase === 'type1' ? 'Pair rule for RNA: A–U, T–A, G–C, C–G.  Cas9 cuts where the guide matches.' : 'The pegRNA carries a template that pairs with the new DNA, the way a guide pairs with its target.';
   text(help, 320, yG + 58, 8, '#cfe4f0', 'center');
   if (!this.wheelOn()) text('Type the letters on your keyboard: A  U  G  C', 320, yG + 72, 8, '#a9c7d8', 'center');
+  else if (typeof PADUI !== 'undefined' && PADUI.on) text('D-pad: pick a letter on the wheel · A: enter it', 320, yG + 72, 8, '#a9c7d8', 'center');
   ctx.restore();
-  if (this.wheelOn()) { const L = 'AUGC'; for (let i = 0; i < 4; i++) { const [x, y] = this.wheelPos(i), on = f.sel === i; dgCirc(ctx, x, y, 26, on ? '#ffd36b' : BASE_COL[L[i]], '#06101e', 3); text(L[i], x, y + 6, 18, on ? '#1a1000' : '#ffffff', 'center'); } text('TAP', 320, 280, 8, '#a9c7d8', 'center'); }
+  if (this.wheelOn()) { const L = 'AUGC'; for (let i = 0; i < 4; i++) { const [x, y] = this.wheelPos(i), on = f.sel === i; dgCirc(ctx, x, y, 26, on ? '#ffd36b' : BASE_COL[L[i]], '#06101e', 3); text(L[i], x, y + 6, 18, on ? '#1a1000' : '#ffffff', 'center'); } text(typeof PADUI !== 'undefined' && PADUI.on ? 'A' : 'TAP', 320, 280, 8, '#a9c7d8', 'center'); }
  }
 };
 /* keyboard typing for the finale (captured before the game's own key handling, so C doesn't dodge) */

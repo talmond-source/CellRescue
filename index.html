@@ -158,6 +158,9 @@ button.ghost{background:transparent;border-color:#3f6378;color:#a6bdd0;font-size
 .titleBtns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
 .ranger.locked canvas,.ranger.locked img{filter:grayscale(.85) brightness(.6)}.ranger .star.lock{font-size:10px;color:#ffd36b;background:#06101ecc;padding:2px 4px;border-radius:4px}.ranger.locked small{color:#ffd36b}
 button,.ranger,#launch{touch-action:manipulation}
+#padControls{display:none;flex-wrap:wrap;gap:6px 16px;justify-content:center;margin-top:8px;font-size:13px;color:#cfe4f0}body.pad.playing #padControls{display:flex}body.pad #controls{display:none!important}body.pad.playing #mobile{display:none!important}
+.pb{display:inline-grid;place-items:center;min-width:24px;height:24px;padding:0 6px;border-radius:12px;font:700 12px system-ui;color:#fff;margin-right:4px}.pb.a{background:#3bb54a}.pb.b{background:#e0453a}.pb.x{background:#2f7fe0}.pb.y{background:#e8b923;color:#1a1000}.pb.rb,.pb.ls{background:#46546e;border-radius:6px}
+body.pad button:focus{outline:3px solid #ffd36b;outline-offset:3px}
 </style>
 <main><header><strong>ORGANELLE RANGERS</strong><span>CELL RESCUE · ARCADE MISSIONS</span><div class="row"><button id="sound">Sound on</button><button id="pause" hidden>Pause</button></div></header>
 <section id="intro" hidden><canvas id="introArt" width="640" height="360" aria-label="Animated intro: the Phage invades Cell City"></canvas>
@@ -175,7 +178,7 @@ button,.ranger,#launch{touch-action:manipulation}
 <div class="selFoot"><label>PLAYER <input id="student" maxlength="60" autocomplete="off" placeholder="Name or class nickname"></label><button id="export" class="ghost">Export results</button><span id="saveNote"></span></div>
 <p class="info">A fictional cell-city adventure. Objectives teach real cell functions. Combat is a story device. Bacteriophages infect bacteria; the Phage villain’s attacks on this organelle city are fictional. The CRISPR mission represents a bacterial defense system.</p></section>
 <section id="screen" hidden><canvas id="game" width="640" height="360" tabindex="0" aria-label="Organelle Rangers arcade game"></canvas><div id="hud"><div><strong id="rangerName"></strong><div id="health" hidden><i></i></div><span id="energy"></span></div><div id="objective"></div></div><div id="toast" hidden></div><section id="speech" hidden><canvas id="portrait" width="72" height="88"></canvas><div id="speechText"><div id="speaker"></div><p id="line"><span id="lineShown"></span><span id="lineRest" aria-hidden="true"></span></p><button id="next">Continue ↵</button></div></section><div id="overlay" class="overlay" hidden><div class="panel" id="panel"><div id="modalTag" class="eyebrow"></div><h2 id="modalTitle"></h2><p id="modalText"></p><div id="choices"></div><div class="row" id="modalActions"></div></div></div></section>
-<div id="controls" hidden><span><kbd>← →</kbd> Move</span><span><kbd>↑ / Space</kbd> Jump</span><span><kbd>Z</kbd> Combo</span><span><kbd>↓</kbd>+<kbd>Z</kbd> Dive kick (in the air)</span><span><kbd>X</kbd> Blaster</span><span><kbd>C</kbd> Dodge</span><span><kbd>E</kbd> Interact</span><span><kbd>Esc</kbd> Pause</span></div><div id="mobile" hidden><div class="gba">
+<div id="controls" hidden><span><kbd>← →</kbd> Move</span><span><kbd>↑ / Space</kbd> Jump</span><span><kbd>Z</kbd> Combo</span><span><kbd>↓</kbd>+<kbd>Z</kbd> Dive kick (in the air)</span><span><kbd>X</kbd> Blaster</span><span><kbd>C</kbd> Dodge</span><span><kbd>E</kbd> Interact</span><span><kbd>Esc</kbd> Pause</span></div><div id="padControls"><span><b class="pb ls">L-STICK</b> Move</span><span><b class="pb a">A</b> Jump</span><span><b class="pb x">X</b> Attack (in the air: dive kick)</span><span><b class="pb y">Y</b> Blaster</span><span><b class="pb b">B</b> Dodge</span><span><b class="pb rb">RB</b> Use</span><span><b class="pb ls">☰</b> Pause</span></div><div id="mobile" hidden><div class="gba">
 <button class="sh shL" data-key="KeyC">L<small>DODGE</small></button>
 <div id="dpad" aria-label="Direction pad"><i class="du"></i><i class="dd"></i><i class="dl"></i><i class="dr"></i><b></b></div>
 <div class="pills"><button class="pill" data-key="KeyE">USE<small>SELECT</small></button><button class="pill" id="padStart">PAUSE<small>START</small></button></div>
@@ -2731,7 +2734,7 @@ BOSSES.nucleus = {
   const camTarget = clamp((p.x + e.hx) / 2 - W / 2, 0, world.length - W); camera += (camTarget - camera) * Math.min(1, dt * 6);
   if (c.won) { c.won += dt; e.hx += e.face * -1 * 0 + (e.hx > p.x ? 1 : -1) * 260 * dt * Math.min(1, c.won); e.hy -= 220 * dt * Math.min(1, c.won); if (c.won > 2.6) { world.clash = null; e.hp = 0; e.dead = .01; world.cleared = true; } return true; }
   c.k = Math.max(0, c.k - .018 * dt);
-  const pick = n => { const qi = c.order[c.q % c.order.length], q = CLASH_Q[qi], right = c.swap ? 1 - n : n; if (right === 0) { c.k = Math.min(1, c.k + .16); c.q++; c.swap = Math.random() < .5; c.flash = .35; shake = 9; tone(700, .15, 'square', .03); burst(this.mid(c, e).x, this.mid(c, e).y, '#9fe8ff', 30);
+  const pick = n => { const qi = c.order[c.q % c.order.length], q = CLASH_Q[qi], right = c.swap ? 1 - n : n; if (right === 0) { c.k = Math.min(1, c.k + .16); c.q++; c.swap = Math.random() < .5; c.flash = .35; shake = 9; tone(700, .15, 'square', .03); rumble(.9, 220); burst(this.mid(c, e).x, this.mid(c, e).y, '#9fe8ff', 30);
     if (c.k >= 1) { c.won = .01; tone(1000, .6, 'triangle', .04); burst(e.hx, e.hy, '#ffffff', 60); shake = 14; toast('The dragon is blasted out of the genome! Wounded, it flees… this isn’t over.', 5); run.score += 1000; } }
    else { c.k = Math.max(0, c.k - .1); run.retries++; tone(110, .2, 'sawtooth', .03); toast('Not quite: ' + q[1].toLowerCase() + '. The dragon pushes back!', 3); c.q++; c.swap = Math.random() < .5; } };
   if (taps.has('ArrowLeft') || taps.has('KeyA')) c.sel = 0; if (taps.has('ArrowRight') || taps.has('KeyD')) c.sel = 1;
@@ -2778,7 +2781,7 @@ BOSSES.crispr = {
   world.terminal.x = -999; world.terminal.done = true; world.dragonCut = 0; bossPointer();
   const e = makeDragon(760); e.ally = false; e.hp = e.max = 999; world.fin = { phase: 'intro', t: 0, d: e, killed: 0, spawned: 0, spawnT: 0, typed: '', sel: 0, wrong: 0 }; world.finDragon = e;
  },
- wheelOn() { return touchUI.on; },
+ wheelOn() { return touchUI.on || (typeof PADUI !== 'undefined' && PADUI.on); },
  // the dragon is not in the enemy list: it flies on its own path
  fly(e, dt, mode) {
   pushTrail(e); e.clock += dt; const p = player;
@@ -2817,7 +2820,7 @@ BOSSES.crispr = {
  typing(f) {
   f.bad = Math.max(0, (f.bad || 0) - 1 / 60); const L = 'AUGC';
   if (this.wheelOn()) {
-   if (taps.has('ArrowLeft')) f.sel = (f.sel + 3) % 4; if (taps.has('ArrowRight')) f.sel = (f.sel + 1) % 4;
+   if (taps.has('ArrowLeft')) f.sel = (f.sel + 3) % 4; if (taps.has('ArrowRight')) f.sel = (f.sel + 1) % 4; if (taps.has('ArrowUp')) f.sel = 0; if (taps.has('ArrowDown')) f.sel = 2;
    if (taps.has('KeyZ') || taps.has('Space') || taps.has('KeyE')) this.enter(L[f.sel]);
    if (world.bossTap) { const t = world.bossTap; world.bossTap = null; for (let i = 0; i < 4; i++) { const [x, y] = this.wheelPos(i); if (Math.hypot(t.x - x, t.y - y) < 30) { f.sel = i; this.enter(L[i]); } } }
   }
@@ -2858,8 +2861,9 @@ BOSSES.crispr = {
   const help = f.phase === 'type1' ? 'Pair rule for RNA: A–U, T–A, G–C, C–G.  Cas9 cuts where the guide matches.' : 'The pegRNA carries a template that pairs with the new DNA, the way a guide pairs with its target.';
   text(help, 320, yG + 58, 8, '#cfe4f0', 'center');
   if (!this.wheelOn()) text('Type the letters on your keyboard: A  U  G  C', 320, yG + 72, 8, '#a9c7d8', 'center');
+  else if (typeof PADUI !== 'undefined' && PADUI.on) text('D-pad: pick a letter on the wheel · A: enter it', 320, yG + 72, 8, '#a9c7d8', 'center');
   ctx.restore();
-  if (this.wheelOn()) { const L = 'AUGC'; for (let i = 0; i < 4; i++) { const [x, y] = this.wheelPos(i), on = f.sel === i; dgCirc(ctx, x, y, 26, on ? '#ffd36b' : BASE_COL[L[i]], '#06101e', 3); text(L[i], x, y + 6, 18, on ? '#1a1000' : '#ffffff', 'center'); } text('TAP', 320, 280, 8, '#a9c7d8', 'center'); }
+  if (this.wheelOn()) { const L = 'AUGC'; for (let i = 0; i < 4; i++) { const [x, y] = this.wheelPos(i), on = f.sel === i; dgCirc(ctx, x, y, 26, on ? '#ffd36b' : BASE_COL[L[i]], '#06101e', 3); text(L[i], x, y + 6, 18, on ? '#1a1000' : '#ffffff', 'center'); } text(typeof PADUI !== 'undefined' && PADUI.on ? 'A' : 'TAP', 320, 280, 8, '#a9c7d8', 'center'); }
  }
 };
 /* keyboard typing for the finale (captured before the game's own key handling, so C doesn't dodge) */
@@ -3105,7 +3109,7 @@ function loadZone(index){
 }
 function makeEnemy(x,type){const family=type===3?'phage':(world&&world.family)||ENEMY_FAMILY[ranger.id]||'bacteria',info=FAMILY[family],hp=type===3?70:Math.max(3,5+type*2+(info?.hp||0));return {x,y:FLOOR,home:x,type,family,hp,max:hp,face:-1,state:'approach',timer:.4+(x%5)*.1,clock:0,hurt:0,dead:0,attackCount:0,hit:false,walk:0,scale:1,drop:0,lift:0};}
 /* on touch screens, key names in messages become the on-screen button names */
-function keyWords(t){if(!touchUI.on)return t;return t.replace(/\bZ chains/g,'B chains').replace(/([Pp])ress Z\b/g,'$1ress B').replace(/\bX draws/g,'X draws').replace(/\bC dodges/g,'L dodges').replace(/\(C\)/g,'(L)').replace(/\b([Pp])ress E\b/g,'$1ress USE');}
+function keyWords(t){if(typeof PADUI!=='undefined'&&PADUI.on)return padWords(t);if(!touchUI.on)return t;return t.replace(/\bZ chains/g,'B chains').replace(/([Pp])ress Z\b/g,'$1ress B').replace(/\bX draws/g,'X draws').replace(/\bC dodges/g,'L dodges').replace(/\(C\)/g,'(L)').replace(/\b([Pp])ress E\b/g,'$1ress USE');}
 function toast(text,seconds=2.8){text=keyWords(text);$('toast').textContent=text;$('toast').hidden=false;toastTimer=seconds;}
 function updateHUD(){if(!player)return;$('rangerName').textContent=ranger.name.toUpperCase();$('health').firstElementChild.style.width=player.hp*10+'%';$('health').setAttribute('aria-valuenow',player.hp);$('energy').textContent='BLASTER '+Math.floor(player.energy)+'/6';const count=world.cells.filter(c=>c.taken).length;const cm=combatHUD(),extra=world.lock?(world.mode?.custom?'LOCKDOWN':'LOCKDOWN · wave '+Math.max(1,Math.min(world.lock.waves.length,world.lock.wave+1))+'/'+world.lock.waves.length)+(cm?' · '+cm:''):world.style==='puzzle'?puzzleObjective():cm||null;$('objective').textContent=world.boss?(world.shieldActive&&!world.shieldUnlocked?(bossDef()?'DRAGON':'PHAGE')+' SHIELD · Left station [E]':(bossDef()?bossDef().name:'PHAGE')+' · Final encounter'):ranger.zones[zone]+' · '+(world.terminal.done?'Reach the exit':extra&&count<3?extra+' · '+CARGO[ranger.id][zone]+' '+count+'/3':count<3?CARGO[ranger.id][zone]+' '+count+'/3':'Activate station [E]');}
 function burst(x,y,color,count=12){for(let i=0;i<count;i++){const a=Math.random()*Math.PI*2,s=30+Math.random()*120;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-40,life:.25+Math.random()*.25,max:.5,color});}}
@@ -3133,7 +3137,7 @@ function updateDive(p,dt){
  }
  if(p.ground){
   for(const e of enemies)if(e.hp>0&&Math.abs(e.x-p.x)<72&&Math.abs(e.y-p.y)<24)damageEnemy(e,2,24);
-  rings.push({x:p.x+p.face*18,y:p.y,life:.38});shake=Math.max(shake,5);burst(p.x+p.face*18,p.y-4,'#9fe8ff',14);tone(70,.18,'sawtooth',.035);
+  rings.push({x:p.x+p.face*18,y:p.y,life:.38});shake=Math.max(shake,5);if(typeof rumble==='function')rumble(.35,90);burst(p.x+p.face*18,p.y-4,'#9fe8ff',14);tone(70,.18,'sawtooth',.035);
   p.vx=0;p.action={kind:'land',time:0,duration:.2,hit:true};
  }
 }
@@ -3158,7 +3162,7 @@ function splitMutant(e){
  burst(e.x,e.y-20,'#c58cff',16);if(!world.splitTold){world.splitTold=true;toast('The mutated cell divided — finish them fast!');}
 }
 function releaseLatch(e){e.latched=false;if(player.latch===e)player.latch=null;e.x=clamp(e.x-player.face*44,35,world.length-35);e.y=FLOOR;e.state='recover';e.timer=.9;e.hurt=.25;burst(player.x,player.y-30,'#a8ffd9',10);}
-function damagePlayer(amount,sourceX){if(player.inv>0||player.dodge>0||mode!=='play')return;/* Rangers are invincible: learning, not reflexes, decides the mission. A hit still flashes and pushes back. */combatHit(sourceX);player.inv=.85;player.action=null;player.queue=false;player.vx=(player.x<sourceX?-1:1)*110;shake=4;burst(player.x,player.y-35,'#ff7999');tone(90,.12,'sawtooth');updateHUD();}
+function damagePlayer(amount,sourceX){if(player.inv>0||player.dodge>0||mode!=='play')return;/* Rangers are invincible: learning, not reflexes, decides the mission. A hit still flashes and pushes back. */combatHit(sourceX);if(typeof rumble==='function')rumble(.55,140);player.inv=.85;player.action=null;player.queue=false;player.vx=(player.x<sourceX?-1:1)*110;shake=4;burst(player.x,player.y-35,'#ff7999');tone(90,.12,'sawtooth');updateHUD();}
 function terminal(){
  if(world.terminal.done||Math.abs(player.x-world.terminal.x)>70){if(world.style==='puzzle'&&!world.boss)carryInteract();return;}
  if(world.boss){
@@ -3266,7 +3270,7 @@ function frameForPlayer(){const p=player;if(p.inv>.68)return 15;if(p.dodge>0)ret
  }if(!p.ground)return 11;if(Math.abs(p.vx)>15)return [1,2,3,2][Math.floor(p.runClock)%4];return 0;}
 function frameForEnemy(e){if(e.type!==3&&(e.air||e.latched))return e.type*4+3;if(e.type===3){if(e.hp<=0)return 7;if(e.hurt>0)return 6;if(e.state==='windup')return e.attack==='blast'?4:2;if(e.state==='active')return e.attack==='blast'?5:3;return Math.floor(e.walk)%2;}return e.type*4+(e.state==='windup'?2:e.state==='active'?3:Math.floor(e.walk)%2);}
 function rect(color,x,y,w,h){ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.ceil(w),Math.ceil(h));}
-function text(value,x,y,size=10,color='#e8fff5',align='left'){ctx.font='bold '+size+'px monospace';ctx.textAlign=align;ctx.fillStyle='#081120';ctx.fillText(value,x+1,y+1);ctx.fillStyle=color;ctx.fillText(value,x,y);}
+function text(value,x,y,size=10,color='#e8fff5',align='left'){if(typeof PADUI!=='undefined'&&PADUI.on&&typeof value==='string'&&/press|Press|Hold|Keys:|Mouse:|^E · |keyboard|arrow keys/.test(value))value=padWords(value);ctx.font='bold '+size+'px monospace';ctx.textAlign=align;ctx.fillStyle='#081120';ctx.fillText(value,x+1,y+1);ctx.fillStyle=color;ctx.fillText(value,x,y);}
 function drawSprite(id,index,x,y,face=1,alpha=1,rot=0,scale=1){const art=atlases[id]?.[index];if(!art)return;ctx.save();ctx.translate(Math.round(x-camera),Math.round(y));ctx.scale(face*scale,scale);if(rot){ctx.translate(0,DIVE_DROP-38);ctx.rotate(rot);ctx.translate(0,38);}ctx.globalAlpha=alpha;ctx.drawImage(art,-64,-102);ctx.restore();}
 const DIVE_ANGLE=.72,DIVE_DROP=9;
 function drawPlatform(x,y,w,base=false){x-=camera;rect('#0a182b',x,y,w,base?60:18);rect('#6ecbbf',x,y,w,3);rect('#a8fbe1',x+2,y,w-4,1);rect('#324b66',x,y+4,w,base?48:12);rect('#17283e',x,y+13,w,3);
@@ -3404,6 +3408,111 @@ addEventListener('keydown',e=>{if(e.isTrusted&&!e.repeat&&e.key&&e.key.length>0)
 })();
 $('next').onclick=nextLine;$('startBtn').onclick=leaveTitle;$('introBtn').onclick=startIntro;$('playIntro').onclick=startIntro;$('skipGate').onclick=()=>{try{localStorage.setItem('cell-rescue-intro-seen','1');}catch(e){}endIntro();};$('skipIntro').onclick=endIntro;$('introArt').onclick=()=>{if(mode==='intro')endIntro();};$('howBtn').onclick=()=>{$('howPanel').hidden=!$('howPanel').hidden;};$('toTitle').onclick=showTitle;$('pause').onclick=pause;$('launch').onclick=()=>startMission();$('resume').onclick=()=>startMission(true);$('export').onclick=exportResults;$('student').onchange=()=>{profile.name=$('student').value.trim();save();};$('sound').onclick=()=>{muted=!muted;$('sound').textContent=muted?'Sound off':'Sound on';};
 load().catch(error=>{$('loading').textContent='Artwork could not load. Reopen the downloaded HTML file to try again.';console.error(error);});
+
+/* ================= Game controllers (Xbox, PlayStation, Switch Pro: any "standard" pad) =================
+   Browsers hide a controller until a button is pressed, then report it through the Gamepad API; we poll every
+   frame. The keyboard and the controller work side by side, and the hints follow whichever was used last.
+
+   Side-scroller:  stick / D-pad move · A jump · X attack (dive kick in the air) · Y blaster · B dodge
+                   RB or LB use / pick up · Menu pause
+   First-person, top-down, codon wheel, beam clash, letter wheel:  stick / D-pad aim or move or pick · A (or RT) fire / act
+   Menus and pop-ups:  stick / D-pad choose · A select · B back
+   Teacher override: on the locked CRISPR card, press A five times quickly. */
+const PADUI = (() => {
+ // Edge on Xbox: ask for real controller input instead of the browsing cursor (ignored by other browsers)
+ try { if (typeof navigator !== 'undefined') navigator.gamepadInputEmulation = 'gamepad'; } catch (_) {}
+ const B = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, VIEW: 8, MENU: 9, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
+ const S = { on: false, held: new Set(), prev: {}, dirPrev: {}, repeat: {}, index: -1, fake: null };
+ const btn = (gp, i) => { const b = gp.buttons[i]; return !!b && (b.pressed || b.value > .5); };
+ const key = (code) => { const k = { Enter: 'Enter', Escape: 'Escape', Space: ' ' }[code] || code; if (typeof dispatchEvent === 'function' && typeof KeyboardEvent === 'function') dispatchEvent(new KeyboardEvent('keydown', { code, key: k, bubbles: true, cancelable: true })); };
+ function setOn(v) { if (S.on === v) return; S.on = v; document.body?.classList?.toggle('pad', v); if (v && typeof setTouch === 'function') setTouch(false); }
+ if (typeof addEventListener === 'function') {
+  addEventListener('keydown', e => { if (e.isTrusted) setOn(false); }, true);
+  addEventListener('pointerdown', e => { if (e.isTrusted) setOn(false); }, true);
+  addEventListener('gamepadconnected', () => { if (typeof toast === 'function' && mode === 'play') toast('Controller connected'); });
+ }
+ function pick() {
+  if (S.fake) return S.fake;
+  const list = typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : [];
+  if (S.index >= 0 && list[S.index] && list[S.index].connected) return list[S.index];
+  for (const gp of list) if (gp && gp.connected && gp.buttons.some(b => b.pressed)) { S.index = gp.index; return gp; }
+  for (const gp of list) if (gp && gp.connected) return gp;
+  return null;
+ }
+ // what the controller drives right now
+ function context() {
+  if (typeof mode === 'undefined') return 'menu';
+  if (mode === 'play' && !$('overlay')?.hidden) return 'overlay';
+  if (mode !== 'play') return $('overlay') && !$('overlay').hidden ? 'overlay' : mode;
+  if (world?.shooter) return 'aim';
+  const f = world?.fin; if (world?.clash || (f && (f.phase === 'type1' || f.phase === 'type2'))) return 'aim';
+  return 'side';
+ }
+ // the held-key set the game reads every frame
+ function hold(want) { for (const k of [...S.held]) if (!want.has(k)) { keys.delete(k); S.held.delete(k); } for (const k of want) if (!S.held.has(k)) { keyDown(k); S.held.add(k); } }
+ // move keyboard focus between the visible buttons of a pop-up, by direction
+ function moveFocus(dx, dy) {
+  const box = $('overlay'); if (!box || !box.querySelectorAll) return;
+  const list = [...box.querySelectorAll('button')].filter(b => b.offsetParent !== null && !b.disabled); if (!list.length) return;
+  const cur = list.includes(document.activeElement) ? document.activeElement : null;
+  if (!cur) { (list.find(b => b.closest('#answers')) || list[0]).focus(); return; }
+  const r = cur.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2; let best = null, bd = 1e9;
+  for (const b of list) { if (b === cur) continue; const q = b.getBoundingClientRect(), x = q.left + q.width / 2 - cx, y = q.top + q.height / 2 - cy; const along = x * dx + y * dy; if (along <= 4) continue; const side = Math.abs(x * dy - y * dx), d = along + side * 2.2; if (d < bd) { bd = d; best = b; } }
+  (best || cur).focus();
+ }
+ function poll() {
+  const gp = pick(); if (!gp) return;
+  const ax = gp.axes[0] || 0, ay = gp.axes[1] || 0, dz = .45;
+  const dir = { up: btn(gp, B.UP) || ay < -dz, down: btn(gp, B.DOWN) || ay > dz, left: btn(gp, B.LEFT) || ax < -dz, right: btn(gp, B.RIGHT) || ax > dz };
+  const now = {}; for (const k in B) now[k] = btn(gp, B[k]);
+  if (Object.values(now).some(Boolean) || Object.values(dir).some(Boolean)) setOn(true);
+  if (!S.on) { S.prev = now; S.dirPrev = dir; return; }
+  const ctx = context(), t = performance.now();
+  // a button still held from the previous screen (the A that closed a dialog) is ignored until it is released
+  if (ctx !== S.ctx) { S.ctx = ctx; S.block = new Set(Object.keys(now).filter(k => now[k] && S.prev[k])); }
+  const raw = { ...now }; for (const k of [...(S.block || [])]) { if (!now[k]) S.block.delete(k); else now[k] = false; }
+  const edge = k => now[k] && !S.prev[k], dEdge = k => dir[k] && !S.dirPrev[k];
+  const rep = k => { if (dEdge(k)) { S.repeat[k] = t + 380; return true; } if (dir[k] && t >= S.repeat[k]) { S.repeat[k] = t + 150; return true; } return false; };
+  if (ctx === 'side' || ctx === 'aim') {
+   const want = new Set();
+   if (dir.left) want.add('ArrowLeft'); if (dir.right) want.add('ArrowRight');
+   if (ctx === 'aim') { if (dir.up) want.add('ArrowUp'); if (dir.down) want.add('ArrowDown'); if (now.A || now.RT) want.add('KeyZ'); if (now.RB || now.LB) want.add('KeyE'); }
+   else { if (now.A) want.add('Space'); if (now.X) want.add('KeyZ'); if (now.Y) want.add('KeyX'); if (now.B) want.add('KeyC'); if (now.RB || now.LB || now.LT) want.add('KeyE'); if (now.RT) want.add('KeyX'); }
+   hold(want);
+   if (edge('MENU') || edge('VIEW')) key('Escape');
+  } else {
+   hold(new Set());
+   if (ctx === 'overlay') {
+    if (rep('up')) moveFocus(0, -1); if (rep('down')) moveFocus(0, 1); if (rep('left')) moveFocus(-1, 0); if (rep('right')) moveFocus(1, 0);
+    if (edge('A')) { const el = document.activeElement; if (el && el.tagName === 'BUTTON' && $('overlay').contains(el)) el.click(); else moveFocus(0, 1); }
+    if (edge('B') || edge('MENU')) { if (mode === 'pause') key('Escape'); }
+   } else if (ctx === 'dialog') { if (edge('A') || edge('X') || edge('B')) key('Space'); if (edge('MENU')) key('Escape'); }
+   else if (ctx === 'select') { for (const [d, code] of [['up', 'ArrowUp'], ['down', 'ArrowDown'], ['left', 'ArrowLeft'], ['right', 'ArrowRight']]) if (rep(d)) key(code); if (edge('A') || edge('MENU')) key('Enter'); if (edge('B')) key('Escape'); }
+   else if (ctx === 'intro') { if (edge('A') || edge('B') || edge('MENU')) key('Escape'); }
+   else if (ctx === 'introGate') { if (edge('A') || edge('MENU')) key('Enter'); if (edge('B')) $('skipGate')?.click(); }
+   else if (ctx === 'title') { if (edge('A') || edge('MENU')) key('Enter'); if (edge('Y')) $('introBtn')?.click(); }
+  }
+  // the first question of a pop-up gets focus, so A works without moving first
+  if (ctx === 'overlay' && !$('overlay').contains(document.activeElement)) moveFocus(0, 0);
+  S.prev = raw; S.dirPrev = dir;
+ }
+ S.poll = poll;
+ if (typeof requestAnimationFrame === 'function') (function loop() { try { poll(); } catch (_) {} requestAnimationFrame(loop); })();
+ // a short buzz on hits and big moments (pads that support it)
+ S.rumble = (strong, ms = 120) => { if (!S.on || strong <= 0) return; const gp = pick(), v = gp && gp.vibrationActuator; if (!v || !v.playEffect) return; try { v.playEffect('dual-rumble', { duration: ms, strongMagnitude: Math.min(1, strong), weakMagnitude: Math.min(1, strong * .7) }).catch(() => {}); } catch (_) {} };
+ return S;
+})();
+const rumble = (s, ms) => { try { PADUI.rumble(s, ms); } catch (_) {} };
+/* button names in messages, when the controller is in use */
+function padWords(t) {
+ const aim = !!(world?.shooter || world?.clash || world?.fin);
+ t = t.replace(/with the mouse or the arrow keys and fire with a click or Z\. On a touchscreen, just tap where you want to fire\./, 'with the left stick and fire with A.')
+  .replace(/\(aim and click, or arrows \+ Z\)/, '(aim with the stick, fire with A)').replace(/ ?On a touchscreen,[^.!]*[.!]/g, '').replace(/ \(or hold a finger on the screen\)/g, '')
+  .replace(/the arrow keys/g, 'the left stick').replace(/Keys:/g, 'D-pad:').replace(/Mouse: click the amino acid on the rim/, 'Stick: pick an amino acid · A confirms')
+  .replace(/\bX draws/g, 'Y draws').replace(/\bC dodges/g, 'B dodges').replace(/\(C\)/g, '(B)').replace(/\b([Pp])ress E\b/g, '$1ress RB').replace(/\bE picks/g, 'RB picks').replace(/\(E /g, '(RB ').replace(/\[E\]/g, '[RB]').replace(/^E · /, 'RB · ')
+  .replace(/Press Z, tap or click/g, 'Press A').replace(/Fire, tap or press Z/g, 'Press A').replace(/Fire \(or press E\)/g, 'Press A').replace(/Fire, tap or press E/g, 'Press A').replace(/Fire, tap or press E to run/g, 'Press A to run');
+ return t.replace(/\bZ\b/g, aim ? 'A' : 'X');
+}
 
 
 /* ================= Animated intro: "The Phage That Broke the Rules" =================

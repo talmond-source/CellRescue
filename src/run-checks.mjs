@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import vm from 'node:vm';
 const engineText = await fs.readFile(new URL('./engine.js', import.meta.url), 'utf8');
-const introText = await fs.readFile(new URL('./intro.js', import.meta.url), 'utf8');
+const introText = (await fs.readFile(new URL('./gamepad.js', import.meta.url), 'utf8'))+'\n'+(await fs.readFile(new URL('./intro.js', import.meta.url), 'utf8'));
 const campaignText = await fs.readFile(new URL('./campaigns.js', import.meta.url), 'utf8');
 const missionText = await fs.readFile(new URL('./missions.js', import.meta.url), 'utf8');
 const questionText = await fs.readFile(new URL('./questions.js', import.meta.url), 'utf8');

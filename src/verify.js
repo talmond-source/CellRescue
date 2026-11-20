@@ -161,7 +161,8 @@ evaluate(`var tdBot=(id)=>{ranger=RANGERS.find(r=>r.id===id);selected=RANGERS.in
   else if(s.phase==='fight'&&s.p){const p=s.p;s.held=true;
    if(id==='lysosome'){const threat=s.rivals.find(r=>r.gone<=0&&r.r>p.r*1.08&&Math.hypot(r.x-p.x,r.y-p.y)<p.r+r.r+50);
     if(threat){s.aim.x=clamp(p.x+(p.x-threat.x)*3,20,W-20);s.aim.y=clamp(p.y+(p.y-threat.y)*3,50,H-20);}
-    else{const f=s.debris.filter(d=>d.r<p.r*.9).sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0]||s.rivals.find(r=>r.gone<=0&&r.r*1.08<p.r);if(f){s.aim.x=f.x;s.aim.y=f.y;}}}
+    else{const f=s.debris.filter(d=>d.r<p.r*.9).sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0]||s.rivals.find(r=>r.gone<=0&&r.r*1.08<p.r);if(f){s.aim.x=f.x;s.aim.y=f.y;}
+     if(n%90===0){if(s.lastP&&Math.hypot(p.x-s.lastP[0],p.y-s.lastP[1])<6)s.detour=60;s.lastP=[p.x,p.y];}if(s.detour>0){s.detour--;const dx=s.aim.x-p.x,dy=s.aim.y-p.y;s.aim.x=clamp(p.x-dy,20,W-20);s.aim.y=clamp(p.y+dx,50,H-20);}}}
    if(id==='smoother'){const b=s.spreaders.find(b=>b.hp>0);if(b){s.aim.x=b.x;s.aim.y=b.y-10;}else{let best=-1,bd=1e9;for(let k=0;k<s.tiles.length;k++)if(s.tiles[k]>0){const tx=(k%TD_COLS)*TD_TILE+10,ty=TD_TOP+Math.floor(k/TD_COLS)*TD_TILE+10,d=Math.hypot(tx-p.x,ty-p.y);if(d<bd){bd=d;best=k;}}if(best>=0){s.aim.x=(best%TD_COLS)*TD_TILE+10;s.aim.y=TD_TOP+Math.floor(best/TD_COLS)*TD_TILE+10;}}}
    if(id==='mito'){const v=s.vir.filter(v=>v.hp>0&&v.state!=='fly').sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0];if(v){s.aim.x=v.x;s.aim.y=v.y;}else s.held=false;}}
   hitStop=0;step(1/60);}

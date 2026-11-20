@@ -2413,7 +2413,8 @@ SHOOTERS.lysosome = {
  },
  makeDebris(s, size) {
   const kinds = DEBRIS[size], k = kinds[Math.floor(Math.random() * kinds.length)], r = [7, 15, 26][size] * (.85 + Math.random() * .3);
-  let x, y; do { x = 30 + Math.random() * (W - 60); y = 50 + Math.random() * (H - 90); } while (Math.hypot(x - s.p.x, y - s.p.y) < 70);
+  // keep pieces apart, so nothing edible ends up hidden under something too big to eat
+  let x, y, tries = 0; do { x = 30 + Math.random() * (W - 60); y = 50 + Math.random() * (H - 90); tries++; } while (tries < 60 && (Math.hypot(x - s.p.x, y - s.p.y) < 70 || (s.debris || []).some(o => !o.eaten && Math.hypot(o.x - x, o.y - y) < o.r + r + 10)));
   return { ...k, size, r, x, y, rot: Math.random() * 6, ph: Math.random() * 6 };
  },
  makeRival(s, i) { const side = i % 4; return { x: [30, W - 30, 320, 320][side], y: [190, 190, 50, H - 30][side], r: 13 + i * 3 + s.stage * 2, tx: 320, ty: 190, t: 0, seed: i, gone: 0 }; },
@@ -2428,11 +2429,13 @@ SHOOTERS.lysosome = {
   if (s.phase !== 'fight') return; const p = s.p, st = LYSO_STAGES[s.stage];
   for (const d of s.debris) {
    if (d.eaten) continue; d.ph += dt; const dist = Math.hypot(d.x - p.x, d.y - p.y);
-   if (dist < p.r * .9 && d.r < p.r * .92) { d.eaten = true; this.grow(p, d.r); tone(300 + d.size * 80, .07, 'triangle'); tdFloat(s, d.x, d.y - 10, '→ ' + d.made, '#ffd0dc'); run.score += 20 * (d.size + 1);
+   if (dist < p.r * .9 + d.r * .5 && d.r < p.r * .92) { d.eaten = true; this.grow(p, d.r); tone(300 + d.size * 80, .07, 'triangle'); tdFloat(s, d.x, d.y - 10, '→ ' + d.made, '#ffd0dc'); run.score += 20 * (d.size + 1);
     tellOnceSh(s, 'ate' + d.size, ['Digested! Lysosome enzymes break molecules into building blocks the cell reuses.', 'A worn-out mitochondrion! Digesting your own worn-out parts is called autophagy ("self-eating").', 'A whole dead bacterium, digested. White blood cells use lysosomes this way to destroy bacteria.'][d.size]); }
    else if (dist < p.r + d.r && d.r >= p.r * .92) { tellOnceSh(s, 'big' + d.size, 'Too big to engulf yet. Digest smaller pieces to grow first.'); const a = Math.atan2(p.y - d.y, p.x - d.x); p.x = d.x + Math.cos(a) * (p.r + d.r); p.y = d.y + Math.sin(a) * (p.r + d.r); }
   }
   s.debris = s.debris.filter(d => !d.eaten); while (s.debris.length < st.debris - 4) s.debris.push(this.makeDebris(s, Math.random() < .2 ? 2 : Math.random() < .4 ? 1 : 0));
+  // never run out of things you can actually eat
+  if (s.debris.filter(d => d.r < p.r * .9).length < 4 && s.debris.length < st.debris + 6) s.debris.push(this.makeDebris(s, p.r > 26 ? 1 : 0));
   for (const r of s.rivals) {
    if (r.gone > 0) { r.gone -= dt; if (r.gone <= 0) Object.assign(r, this.makeRival(s, r.seed), { r: 12 + s.stage * 2 }); continue; }
    r.t -= dt; const bigger = r.r > p.r * 1.08;
@@ -2563,7 +2566,9 @@ SHOOTERS.mito = {
   const [a, r] = this.polar(p.x, p.y), rc = clamp(r, RING.rIn + 14, RING.rOut - 8); p.x = RING.x + Math.cos(a) * rc; p.y = RING.y + Math.sin(a) * rc;
   if (s.held) { const near = s.vir.find(v => v.state === 'on' && Math.hypot(v.x - p.x, v.y - p.y) < 40); if (near && p.act <= 0) this.press(s); }
  },
- press(s) { const p = s.p; if (s.phase !== 'fight' || p.act > 0) return; p.act = .32; p.hit = false; tone(240, .07, 'triangle'); },
+ press(s) { const p = s.p; if (s.phase !== 'fight' || p.act > 0) return; p.act = .32; p.hit = false; tone(240, .07, 'triangle');
+  // turn toward the nearest virion in reach, so a punch never whiffs behind you
+  const t = s.vir.filter(v => v.hp > 0 && v.state !== 'fly' && Math.hypot(v.x - p.x, v.y - p.y) < 56).sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0]; if (t && Math.abs(t.x - p.x) > 2) p.face = t.x > p.x ? 1 : -1; },
  update(s, dt) {
   if (s.phase !== 'fight' || !s.p) return; const p = s.p, st = MITO_STAGES[s.stage];
   if (p.act > 0 && !p.hit && p.act < .2) { p.hit = true; for (const v of s.vir) { if (v.hp <= 0 || v.state === 'fly') continue; const dx = v.x - p.x, dy = v.y - p.y; if (Math.hypot(dx, dy) < 50 && dx * p.face > -14) { v.hp--; v.hurt = .2; burst(v.x, v.y - 20, '#d0fff0', 10); shake = 2; const [a, r] = this.polar(v.x, v.y), na = a + (Math.random() < .5 ? -.35 : .35); v.x = RING.x + Math.cos(na) * r; v.y = RING.y + Math.sin(na) * r; v.state = 'off'; v.t = .9; if (v.hp <= 0) { burst(v.x, v.y - 20, '#ffd36b', 18); run.score += 60; tone(150, .14, 'square', .02); } } } }

@@ -157,6 +157,7 @@ button.ghost{background:transparent;border-color:#3f6378;color:#a6bdd0;font-size
 #introBtn{background:#0c1a30cc;border-color:#5fa59c;font-size:13px;padding:7px 14px}
 .titleBtns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
 .ranger.locked canvas,.ranger.locked img{filter:grayscale(.85) brightness(.6)}.ranger .star.lock{font-size:10px;color:#ffd36b;background:#06101ecc;padding:2px 4px;border-radius:4px}.ranger.locked small{color:#ffd36b}
+button,.ranger,#launch{touch-action:manipulation}
 </style>
 <main><header><strong>ORGANELLE RANGERS</strong><span>CELL RESCUE · ARCADE MISSIONS</span><div class="row"><button id="sound">Sound on</button><button id="pause" hidden>Pause</button></div></header>
 <section id="intro" hidden><canvas id="introArt" width="640" height="360" aria-label="Animated intro: the Phage invades Cell City"></canvas>
@@ -3048,11 +3049,11 @@ function buildRoster(){
  $('roster').replaceChildren();RANGERS.forEach((r,i)=>{const b=document.createElement('button');b.className='ranger';b.style.setProperty('--color',r.color);b.setAttribute('aria-label','Select '+r.name+' Ranger');
  const art=mugshot(r.id);
  const title=document.createElement('strong'),SHORT={'Cell Membrane':'Membrane',Mitochondria:'Mito'};const full=document.createElement('span'),short=document.createElement('span');full.className='full';short.className='short';full.textContent=r.name;short.textContent=SHORT[r.name]||r.name;title.append(full,short);const sub=document.createElement('small');const done=profile.results.some(v=>v.ranger===r.id),locked=r.id==='crispr'&&crisprLocked();sub.textContent=done?'Mission cleared ✓':locked?'🔒 Clear 7 Rangers ('+clearedOthers()+'/7)':r.role;if(locked)b.classList.add('locked');
- b.append(art,title,sub);if(done){const st=document.createElement('span');st.className='star';st.textContent='★';st.setAttribute('aria-label','cleared');b.append(st);}if(locked){const st=document.createElement('span');st.className='star lock';st.textContent='🔒 '+clearedOthers()+'/7';st.setAttribute('aria-label','locked');b.append(st);}b.onclick=()=>{selectRanger(i);tone(520,.05,'square');if(r.id==='crispr')teacherKnock();};$('roster').append(b);});
+ b.append(art,title,sub);if(done){const st=document.createElement('span');st.className='star';st.textContent='★';st.setAttribute('aria-label','cleared');b.append(st);}if(locked){const st=document.createElement('span');st.className='star lock';st.textContent='🔒 '+clearedOthers()+'/7';st.setAttribute('aria-label','locked');b.append(st);}b.onclick=()=>{selectRanger(i);tone(520,.05,'square');};$('roster').append(b);});
 }
-/* teacher override: 5 quick taps on the CRISPR card (or B pressed 5 times while CRISPR is selected) unlocks the finale
+/* teacher override: with the locked CRISPR Ranger selected, press Start Mission 5 times quickly (or B 5 times) unlocks the finale
    until the page is reloaded. Nothing is saved, so students on another device are not affected. */
-let knocks=[];function teacherKnock(){if(!crisprLocked())return;const t=performance.now();knocks=knocks.filter(k=>t-k<2500);knocks.push(t);
+let knocks=[];function teacherKnock(){if(!crisprLocked())return;const t=performance.now();knocks=knocks.filter(k=>t-k<3000);knocks.push(t);
  if(knocks.length>=5){knocks=[];UNLOCK_ALL=true;tone(660,.12,'triangle');setTimeout(()=>tone(990,.2,'triangle'),120);buildRoster();selectRanger(RANGERS.findIndex(r=>r.id==='crispr'));$('selectedStory').textContent='✓ Teacher override: the CRISPR finale is unlocked until you reload the page.';}}
 function selectRanger(i){selected=i;showcaseClock=0;ranger=RANGERS[i];const ms=$('missionSelect');if(ms.style){ms.style.setProperty('--rc',ranger.color);if(!ms.dataset.bg&&typeof ASSETS!=='undefined'){ms.dataset.bg=1;ms.style.setProperty('--selbg','url('+ASSETS.environment+')');}}
  const route=$('selRoute');if(route&&route.replaceChildren)route.replaceChildren(...(ranger.zones||[]).map(z=>{const li=document.createElement('li');li.textContent=z;return li;}));
@@ -3074,7 +3075,7 @@ function typeStep(dt){
 }
 function nextLine(){if(mode!=='dialog')return;if(typing&&typing.shown<typing.text.length){typing.shown=typing.text.length;typing.wait=0;renderTyping();return;}if(!dialog.length){typing=null;$('speech').hidden=true;dialogDone();canvas.focus();return;}const [id,raw]=dialog.shift(),text=keyWords(raw);$('speaker').textContent=id==='phage'?'PHAGE':(RANGERS.find(r=>r.id===id)?.name||'CRISPR')+' RANGER';typing={text,shown:0,wait:.12,count:0,pitch:id==='phage'?260:id==='crispr'?560:680};$('line').setAttribute('aria-label',text);renderTyping();const g=$('portrait').getContext('2d');g.fillStyle='#203953';g.fillRect(0,0,72,88);g.imageSmoothingEnabled=false;if(portraits[id])g.drawImage(portraits[id],27,0,70,68,0,0,72,88);else g.drawImage(atlases.phage[0],30,0,66,66,0,0,72,88);}
 function startMission(resume=false){
- if(ranger.id==='crispr'&&crisprLocked()){tone(110,.2,'sawtooth',.03);$('selectedStory').textContent='🔒 Locked: clear 7 other Rangers first ('+clearedOthers()+'/7). CRISPR’s mission is the final battle.';return;}
+ if(ranger.id==='crispr'&&crisprLocked()){teacherKnock();if(crisprLocked()){tone(110,.2,'sawtooth',.03);$('selectedStory').textContent='🔒 Locked: clear 7 other Rangers first ('+clearedOthers()+'/7). CRISPR’s mission is the final battle.';}return;}
  profile.name=$('student').value.trim();const cp=resume&&profile.checkpoint?.id===ranger.id?profile.checkpoint:null;
  run=cp?.run?structuredClone(cp.run):{id:Date.now(),seconds:0,answers:[],retries:0,score:0};
  $('missionSelect').hidden=true;$('screen').hidden=false;$('controls').hidden=false;$('mobile').hidden=false;document.body?.classList?.add('playing');$('pause').hidden=false;loadZone(cp?cp.zone:0);tone(520,.15,'triangle');

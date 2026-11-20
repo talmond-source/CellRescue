@@ -14,7 +14,7 @@ const PADUI = (() => {
  const S = { on: false, held: new Set(), prev: {}, dirPrev: {}, repeat: {}, index: -1, fake: null };
  const btn = (gp, i) => { const b = gp.buttons[i]; return !!b && (b.pressed || b.value > .5); };
  const key = (code) => { const k = { Enter: 'Enter', Escape: 'Escape', Space: ' ' }[code] || code; if (typeof dispatchEvent === 'function' && typeof KeyboardEvent === 'function') dispatchEvent(new KeyboardEvent('keydown', { code, key: k, bubbles: true, cancelable: true })); };
- function setOn(v) { if (S.on === v) return; S.on = v; document.body?.classList?.toggle('pad', v); if (v && typeof setTouch === 'function') setTouch(false); }
+ function setOn(v) { if (S.on === v) return; S.on = v; document.body?.classList?.toggle('pad', v); if (v && typeof setTouch === 'function') setTouch(false); fitSelect(); }
  if (typeof addEventListener === 'function') {
   addEventListener('keydown', e => { if (e.isTrusted) setOn(false); }, true);
   addEventListener('pointerdown', e => { if (e.isTrusted) setOn(false); }, true);
@@ -102,3 +102,14 @@ function padWords(t) {
   .replace(/Press Z, tap or click/g, 'Press A').replace(/Fire, tap or press Z/g, 'Press A').replace(/Fire \(or press E\)/g, 'Press A').replace(/Fire, tap or press E/g, 'Press A').replace(/Fire, tap or press E to run/g, 'Press A to run');
  return t.replace(/\bZ\b/g, aim ? 'A' : 'X');
 }
+
+/* With a controller there is no way to scroll, so the Ranger select screen shrinks just enough to fit the screen
+   (on Xbox it was a few pixels too tall). Keyboard and touch players keep the normal size. */
+function fitSelect() {
+ const ms = typeof $ === 'function' && $('missionSelect'); if (!ms || !ms.style || typeof innerHeight === 'undefined') return;
+ ms.style.zoom = ''; if (!PADUI.on || ms.hidden) return;
+ let z = 1;
+ for (let k = 0; k < 4; k++) { const over = document.documentElement.scrollHeight - innerHeight; if (over <= 0) break; const h = ms.getBoundingClientRect().height; if (h <= 0) break; z = Math.max(.55, z * (h - over - 14) / h); ms.style.zoom = String(z); }
+ scrollTo(0, 0);
+}
+if (typeof addEventListener === 'function') addEventListener('resize', () => { try { fitSelect(); } catch (_) {} });

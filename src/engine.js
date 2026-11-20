@@ -47,8 +47,12 @@ function cleanCell(image,sx,sy,sw,sh,slate=false){
  g.putImageData(data,0,0);
  return {canvas:c,bounds:[minX,minY,maxX,maxY]};
 }
+/* Sprites arrive pre-cut (tools/bake_sprites.py): 128 x 112 frames, feet at (64,102). Loading them only draws images,
+   never reads canvas pixels, because some browsers (Edge on Xbox) return blank pixel data and every character vanished. */
 async function loadAtlas(id,cols,rows,height){
- const image=await readImage(ASSETS[id+'-sheet']); const sw=Math.floor(image.width/cols),sh=Math.floor(image.height/rows),raw=[];
+ const image=await readImage(ASSETS[id+'-sheet']);
+ if(image.width===cols*128&&image.height===rows*112){atlases[id]=Array.from({length:cols*rows},(_,i)=>{const out=makeCanvas(128,112);out.getContext('2d').drawImage(image,(i%cols)*128,Math.floor(i/cols)*112,128,112,0,0,128,112);return out;});return;}
+ const sw=Math.floor(image.width/cols),sh=Math.floor(image.height/rows),raw=[];
  for(let i=0;i<cols*rows;i++)raw.push(cleanCell(image,(i%cols)*sw,Math.floor(i/cols)*sh,sw,sh));
  const baselineHeight=Math.max(1,raw[0].bounds[3]-raw[0].bounds[1]+1),scale=height/baselineHeight;
  atlases[id]=raw.map(({canvas:cell,bounds},i)=>{
@@ -57,7 +61,8 @@ async function loadAtlas(id,cols,rows,height){
  });
 }
 async function loadPortrait(id){
- const image=await readImage(ASSETS[id+'-approved']);const cell=cleanCell(image,0,0,image.width,image.height,true);
+ const image=await readImage(ASSETS[id+'-approved']);
+ if(image.width===120&&image.height===160){const out=makeCanvas(120,160);out.getContext('2d').drawImage(image,0,0);portraits[id]=out;return;}const cell=cleanCell(image,0,0,image.width,image.height,true);
  const [x,y,right,bottom]=cell.bounds;const out=makeCanvas(120,160),g=out.getContext('2d');
  const scale=145/Math.max(1,bottom-y);g.drawImage(cell.canvas,60-(x+right)*scale/2,8-y*scale,image.width*scale,image.height*scale);portraits[id]=out;
 }
@@ -89,7 +94,9 @@ async function load(){
 const mugs={};
 function mugshot(id){
  if(mugs[id])return mugs[id];const out=makeCanvas(160,160),g=out.getContext('2d'),src=portraits[id];
- if(src&&src.getContext){const d=src.getContext('2d').getImageData(0,0,src.width,src.height).data;let top=src.height,xs=0,n=0;
+ const mm=typeof SPRITE_META!=='undefined'&&SPRITE_META.mug[id];
+ if(src&&mm){const w=74;g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';g.drawImage(src,mm[0]-w/2,mm[1]-4,w,w,0,0,160,160);}
+ else if(src&&src.getContext){const d=src.getContext('2d').getImageData(0,0,src.width,src.height).data;let top=src.height,xs=0,n=0;
   for(let y=0;y<src.height&&top===src.height;y++)for(let x=0;x<src.width;x++)if(d[(y*src.width+x)*4+3]>40){top=y;break;}
   for(let y=top;y<top+18&&y<src.height;y++)for(let x=0;x<src.width;x++)if(d[(y*src.width+x)*4+3]>40){xs+=x;n++;}
   const cx=n?xs/n:src.width/2,w=74;g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';g.drawImage(src,cx-w/2,top-4,w,w,0,0,160,160);}

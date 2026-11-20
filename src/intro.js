@@ -312,10 +312,10 @@ function sceneTitle(t){const g=ictx,lt=t-81;ibg('environment',lt*14,.6);
 const ISCENES=[[0,15,sceneColony],[15,23,sceneCity],[23,32,sceneBreach],[32,44,sceneHijack],[44,58,sceneValiant],[58,64,sceneAlarm],[64,72.4,sceneRoll],[72.4,81,sceneStand],[81,INTRO_LEN,sceneTitle]];
 /* where each Ranger's fist is in a frame, found once from the sprite itself */
 const introHands={};
-function introHand(id,frame){const k=id+frame;if(introHands[k])return introHands[k];const art=atlases[id]?.[frame];if(!art)return [10,-50];
+function introHand(id,frame){const k=id+frame;if(introHands[k])return introHands[k];if(typeof SPRITE_META!=='undefined'&&SPRITE_META.hand[k])return introHands[k]=SPRITE_META.hand[k];const art=atlases[id]?.[frame];if(!art)return [10,-50];
  const d=art.getContext?.('2d')?.getImageData?.(0,0,128,112)?.data;if(!d||!d.length)return introHands[k]=[10,-50];let best=[10,-50],bx=-1;for(let y=30;y<75;y++)for(let x=127;x>=0;x--){if(d[(y*128+x)*4+3]>60){if(x>bx){bx=x;best=[x-64,y-102];}break;}}return introHands[k]=best;}
 
-function introTop(id,frame){const k='top'+id+frame;if(introHands[k])return introHands[k];const art=atlases[id]?.[frame];
+function introTop(id,frame){const k='top'+id+frame;if(introHands[k])return introHands[k];if(typeof SPRITE_META!=='undefined'&&SPRITE_META.top[id+frame])return introHands[k]=SPRITE_META.top[id+frame];const art=atlases[id]?.[frame];
  const d=art?.getContext?.('2d')?.getImageData?.(0,0,128,112)?.data;if(!d||!d.length)return introHands[k]=[-10,-98];
  for(let y=0;y<112;y++)for(let x=0;x<128;x++)if(d[(y*128+x)*4+3]>60)return introHands[k]=[x-64,y-102+4];return introHands[k]=[-10,-98];}
 function drawIntro(dt){if(!ictx)return;introClock+=dt;const t=introClock;introCues(t);

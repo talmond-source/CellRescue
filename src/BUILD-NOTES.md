@@ -24,3 +24,8 @@ The in-app browser rejected the local-file preview under its URL security policy
 The 14 missions have individual story text, cargo, interactive objective systems, route layouts and debrief questions. Each Ranger has three workshop challenges and a fourth variant for disabling Phage’s mid-fight shield. They share the movement and combat system. Puzzles use explicit simplified models where their controls differ from real molecular processes. The generated action poses follow the approved character designs but have the small pose-to-pose drawing differences typical of generated sprite sheets.
 
 Art was generated with the built-in image tool. `art-prompts.json` records the Ranger animation brief and its identity/layout references.
+
+## Sprites are pre-cut (Xbox fix)
+Edge on Xbox returned blank canvas pixel data, so the in-browser background cutting made every character invisible.
+Sprites and portraits are now cut once at build time: after changing any art in `src/packed`, run
+`python3 -I src/tools/bake_sprites.py`, then `python3 src/build.py`. The game only draws the pre-cut images in `src/baked`.

@@ -76,6 +76,9 @@ SHOOTERS.lysosome = {
    else if (dist < p.r + d.r && d.r >= p.r * .92) { tellOnceSh(s, 'big' + d.size, 'Too big to engulf yet. Digest smaller pieces to grow first.'); const a = Math.atan2(p.y - d.y, p.x - d.x); p.x = d.x + Math.cos(a) * (p.r + d.r); p.y = d.y + Math.sin(a) * (p.r + d.r); }
   }
   s.debris = s.debris.filter(d => !d.eaten); while (s.debris.length < st.debris - 4) s.debris.push(this.makeDebris(s, Math.random() < .2 ? 2 : Math.random() < .4 ? 1 : 0));
+  // catch-up: if you haven't grown in a while, a few small pieces drift in near you
+  p.still = (p.lastR === p.r ? (p.still || 0) + dt : 0); p.lastR = p.r;
+  if (p.still > 15) { p.still = 0; for (let i = 0; i < 3; i++) { const a = Math.random() * 6.28, d = p.r + 40 + Math.random() * 40, x = clamp(p.x + Math.cos(a) * d, 30, W - 30), y = clamp(p.y + Math.sin(a) * d, 50, H - 40); s.debris.push({ ...DEBRIS[0][i], size: 0, r: 7, x, y, rot: 0, ph: 0 }); } tellOnceSh(s, 'assist', 'Some small debris drifted in nearby. Grab the small pieces first!'); }
   // never run out of things you can actually eat
   if (s.debris.filter(d => d.r < p.r * .9).length < 4 && s.debris.length < st.debris + 6) s.debris.push(this.makeDebris(s, p.r > 26 ? 1 : 0));
   for (const r of s.rivals) {

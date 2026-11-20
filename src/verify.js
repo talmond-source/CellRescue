@@ -25,6 +25,22 @@ evaluate("var answer=i=>answerQuestion(document.createElement('button'),i);var w
 check(evaluate('RANGERS.length')===14,'14 characters');checks++;
 check(evaluate('new Set(RANGERS.map(r=>{ranger=r;return JSON.stringify(makeWorld(0))})).size')===14,'14 distinct route layouts');checks++;
 evaluate("muted=true; for(const r of RANGERS){atlases[r.id]=Array(16).fill({});portraits[r.id]={};}atlases.phage=Array(8).fill({});");
+check(evaluate('crisprLocked()')===true,'CRISPR finale starts locked');checks++;
+evaluate("ranger=RANGERS.find(r=>r.id==='crispr');selected=RANGERS.indexOf(ranger);startMission();");check(evaluate('mode')!=='play'&&evaluate('mode')!=='dialog','A locked CRISPR mission does not start');checks++;
+evaluate("profile.results=['atp','ribosome','rougher','golgi','cytoplasm','membrane'].map(id=>({ranger:id}));");check(evaluate('crisprLocked()')===true,'Six cleared Rangers is not enough');checks++;
+evaluate("profile.results.push({ranger:'mito'});");check(evaluate('crisprLocked()')===false,'Seven cleared Rangers unlocks the finale');checks++;
+evaluate("profile.results=[];UNLOCK_ALL=true;");
+evaluate(`var bossPlay=(id)=>{const run1=(n,fn)=>{for(let i=0;i<n&&mode==='play';i++){if(fn&&fn()===false)break;hitStop=0;player.inv=.6;step(1/60);taps.clear();}};
+ while(mode==='dialog')nextLine();
+ if(id==='nucleus'){const e=enemies[0];if(!e.dragon)return 'no dragon';damageEnemy(e,36);if(!world.shieldActive)return 'no shield';player.x=world.terminal.x;terminal();if(!activeQuestion||activeQuestion.index!==3)return 'no shield question';answer(activeQuestion.q.a);proceed();
+  e.hp=e.max*.3;damageEnemy(e,10);if(!world.clash)return 'no clash';let n=0;while(world.clash&&n++<3000){const c=world.clash;if(!c.won&&n%20===0){c.sel=c.swap?1:0;taps.add('KeyZ');}hitStop=0;step(1/60);taps.clear();}
+  run1(400);}
+ else{const f=world.fin;let n=0;while(f.phase!=='type1'&&n++<300){step(1/60);}for(const b of GUIDE_TARGET)BOSSES.crispr.enter(PAIR_RNA[b]);if(f.phase!=='cut')return 'guide not accepted';
+  n=0;while(mode==='play'&&n++<1200)step(1/60);if(!activeQuestion||activeQuestion.index!==3)return 'no auth question ('+f.phase+')';answer(activeQuestion.q.a);proceed();
+  n=0;while(f.phase!=='type2'&&n++<600)step(1/60);for(const b of EDIT_NEW)BOSSES.crispr.enter(PAIR_RNA[b]);if(f.phase!=='turn')return 'edit not accepted';
+  n=0;while(f.phase!=='battle'&&n++<600)step(1/60);
+  run1(20000,()=>{for(const v of enemies)if(v.hp>0&&v.drop===0&&Math.random()<.05){v.hp=1;damageEnemy(v,9);}});}
+ return mode==='quiz'&&activeQuestion.index===4?'ok':'ended in '+mode;};`);
 for(let i=0;i<14;i++){
  evaluate(`selected=${i};ranger=RANGERS[selected];startMission();while(mode==='dialog')nextLine();if(world.shooter){loadZone(ZONE_STYLES[ranger.id].indexOf('platform'));while(mode==='dialog')nextLine();}`);
  check(evaluate('mode')==='play','Start enters play');checks++;
@@ -47,10 +63,13 @@ for(let i=0;i<14;i++){
   evaluate('player.x=world.length-40;enemies=[];step(1/60)');
   check(evaluate('zone')===z+1,'Exit advances exactly one zone');checks++;
  }
+ const bid=evaluate('ranger.id');
+ if(bid==='nucleus'||bid==='crispr'){const r=evaluate(`bossPlay('${bid}')`);check(r==='ok',bid+' story boss plays through to the debrief ('+r+')');checks++;}
+ else{
  evaluate("while(mode==='dialog')nextLine();damageEnemy(enemies[0],40);player.x=world.terminal.x;terminal();");
  check(evaluate('activeQuestion.index')===3,'Shield station asks the Phage question');checks++;
  evaluate("answer(activeQuestion.q.a);proceed();enemies[0].hp=1;damageEnemy(enemies[0],2);hitStop=0;for(let n=0;n<40;n++)step(1/60);");
- check(evaluate('world.shieldUnlocked'),'Shield question unlocks the shield');checks++;
+ check(evaluate('world.shieldUnlocked'),'Shield question unlocks the shield');checks++;}
  check(evaluate('mode')==='quiz','Boss defeat opens debrief');checks++;
  check(evaluate('activeQuestion.index')===4,'Debrief is the fifth question');checks++;
  evaluate("answer(activeQuestion.q.a);proceed();");
@@ -155,7 +174,7 @@ check(evaluate("MISSILES.every(st=>st.every(v=>v[0]==='AUG' && WHEEL.aaOf(v.at(-
 evaluate(`ranger=RANGERS.find(r=>r.id==='mitosis');selected=RANGERS.indexOf(ranger);startMission();loadZone(ZONE_STYLES.mitosis.indexOf('combat'));while(mode==='dialog')nextLine();var s=world.shooter;shooterPress(s,false);for(let i=0;i<400;i++){hitStop=0;step(1/60);}var h=s.targets.find(t=>t.hp>0&&!t.tumor),m0=s.mistakes;s.targets=[h];var c=SHOOTERS.mitosis.center(h);s.aim.x=c[0];s.aim.y=c[1];shooterPress(s,false);`);
 check(evaluate("h.hp===1 && s.mistakes===m0+1"),'Lasering a healthy cell is a mistake and does not destroy it');checks++;
 // Top-down zones: bots play Lysosome, Smooth ER and Mitochondria through all three stages to the station.
-evaluate(`var tdBot=(id)=>{ranger=RANGERS.find(r=>r.id===id);selected=RANGERS.indexOf(ranger);startMission();loadZone(ZONE_STYLES[id].indexOf('combat'));while(mode==='dialog')nextLine();const s=world.shooter;let n=0;
+evaluate(`var tdBot=(id)=>{keys.clear();taps.clear();touchUI.on=false;ranger=RANGERS.find(r=>r.id===id);selected=RANGERS.indexOf(ranger);startMission();loadZone(ZONE_STYLES[id].indexOf('combat'));while(mode==='dialog')nextLine();const s=world.shooter;let n=0;
  while(s.stage<3&&n++<90000){
   if(s.phase==='card'){shooterPress(s,false);}
   else if(s.phase==='fight'&&s.p){const p=s.p;s.held=true;

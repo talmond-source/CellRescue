@@ -29,6 +29,8 @@ check(evaluate('crisprLocked()')===true,'CRISPR finale starts locked');checks++;
 evaluate("ranger=RANGERS.find(r=>r.id==='crispr');selected=RANGERS.indexOf(ranger);startMission();");check(evaluate('mode')!=='play'&&evaluate('mode')!=='dialog','A locked CRISPR mission does not start');checks++;
 evaluate("profile.results=['atp','ribosome','rougher','golgi','cytoplasm','membrane'].map(id=>({ranger:id}));");check(evaluate('crisprLocked()')===true,'Six cleared Rangers is not enough');checks++;
 evaluate("profile.results.push({ranger:'mito'});");check(evaluate('crisprLocked()')===false,'Seven cleared Rangers unlocks the finale');checks++;
+evaluate("profile.results=[];selected=RANGERS.findIndex(r=>r.id==='crispr');ranger=RANGERS[selected];for(let i=0;i<4;i++)teacherKnock();");check(evaluate('crisprLocked()')===true,'Four knocks do not unlock CRISPR');checks++;
+evaluate("teacherKnock();");check(evaluate('crisprLocked()')===false,'Five quick knocks (teacher override) unlock CRISPR');checks++;
 evaluate("profile.results=[];UNLOCK_ALL=true;");
 evaluate(`var bossPlay=(id)=>{const run1=(n,fn)=>{for(let i=0;i<n&&mode==='play';i++){if(fn&&fn()===false)break;hitStop=0;player.inv=.6;step(1/60);taps.clear();}};
  while(mode==='dialog')nextLine();

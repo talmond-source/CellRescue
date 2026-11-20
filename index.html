@@ -3048,8 +3048,12 @@ function buildRoster(){
  $('roster').replaceChildren();RANGERS.forEach((r,i)=>{const b=document.createElement('button');b.className='ranger';b.style.setProperty('--color',r.color);b.setAttribute('aria-label','Select '+r.name+' Ranger');
  const art=mugshot(r.id);
  const title=document.createElement('strong'),SHORT={'Cell Membrane':'Membrane',Mitochondria:'Mito'};const full=document.createElement('span'),short=document.createElement('span');full.className='full';short.className='short';full.textContent=r.name;short.textContent=SHORT[r.name]||r.name;title.append(full,short);const sub=document.createElement('small');const done=profile.results.some(v=>v.ranger===r.id),locked=r.id==='crispr'&&crisprLocked();sub.textContent=done?'Mission cleared ✓':locked?'🔒 Clear 7 Rangers ('+clearedOthers()+'/7)':r.role;if(locked)b.classList.add('locked');
- b.append(art,title,sub);if(done){const st=document.createElement('span');st.className='star';st.textContent='★';st.setAttribute('aria-label','cleared');b.append(st);}if(locked){const st=document.createElement('span');st.className='star lock';st.textContent='🔒 '+clearedOthers()+'/7';st.setAttribute('aria-label','locked');b.append(st);}b.onclick=()=>{selectRanger(i);tone(520,.05,'square');};$('roster').append(b);});
+ b.append(art,title,sub);if(done){const st=document.createElement('span');st.className='star';st.textContent='★';st.setAttribute('aria-label','cleared');b.append(st);}if(locked){const st=document.createElement('span');st.className='star lock';st.textContent='🔒 '+clearedOthers()+'/7';st.setAttribute('aria-label','locked');b.append(st);}b.onclick=()=>{selectRanger(i);tone(520,.05,'square');if(r.id==='crispr')teacherKnock();};$('roster').append(b);});
 }
+/* teacher override: 5 quick taps on the CRISPR card (or B pressed 5 times while CRISPR is selected) unlocks the finale
+   until the page is reloaded. Nothing is saved, so students on another device are not affected. */
+let knocks=[];function teacherKnock(){if(!crisprLocked())return;const t=performance.now();knocks=knocks.filter(k=>t-k<2500);knocks.push(t);
+ if(knocks.length>=5){knocks=[];UNLOCK_ALL=true;tone(660,.12,'triangle');setTimeout(()=>tone(990,.2,'triangle'),120);buildRoster();selectRanger(RANGERS.findIndex(r=>r.id==='crispr'));$('selectedStory').textContent='✓ Teacher override: the CRISPR finale is unlocked until you reload the page.';}}
 function selectRanger(i){selected=i;showcaseClock=0;ranger=RANGERS[i];const ms=$('missionSelect');if(ms.style){ms.style.setProperty('--rc',ranger.color);if(!ms.dataset.bg&&typeof ASSETS!=='undefined'){ms.dataset.bg=1;ms.style.setProperty('--selbg','url('+ASSETS.environment+')');}}
  const route=$('selRoute');if(route&&route.replaceChildren)route.replaceChildren(...(ranger.zones||[]).map(z=>{const li=document.createElement('li');li.textContent=z;return li;}));
  const cleared=new Set(profile.results.map(v=>v.ranger)).size;if($('selCount'))$('selCount').textContent=cleared+'/'+RANGERS.length+' CLEARED';$('selectedName').textContent=ranger.name+' Ranger';$('selectedRole').textContent=ranger.role.toUpperCase();$('selectedStory').textContent=ranger.id==='crispr'&&crisprLocked()?'🔒 THE FINAL BATTLE. Clear 7 other Rangers’ missions to unlock it ('+clearedOthers()+'/7 cleared so far).':ranger.intro;
@@ -3370,6 +3374,7 @@ addEventListener('keydown',e=>{if(e.target instanceof HTMLInputElement)return;
  if(mode==='select'&&!$('missionSelect').hidden){const cols=getComputedStyle($('roster')).gridTemplateColumns.split(' ').length||7,mv={ArrowLeft:-1,ArrowRight:1,ArrowUp:-cols,ArrowDown:cols}[e.code];
   if(mv!==undefined){e.preventDefault();const n=selected+mv;if(n>=0&&n<RANGERS.length){selectRanger(n);tone(520,.05,'square');$('roster').children[n]?.focus?.({preventScroll:true});}return;}
   if((e.code==='Enter'||e.code==='Space')&&!(e.target instanceof HTMLButtonElement)){e.preventDefault();if(!e.repeat)startMission();return;}
+  if(e.code==='KeyB'&&ranger?.id==='crispr'&&!e.repeat){teacherKnock();return;}
   if(e.code==='Escape'){e.preventDefault();showTitle();return;}}
  if(e.code==='Escape'){e.preventDefault();if(!e.repeat)pause();return;}
  if((e.code==='Enter'||e.code==='Space')&&mode==='dialog'){e.preventDefault();if(!e.repeat)nextLine();return;}
